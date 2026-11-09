@@ -1,0 +1,4 @@
+[2026-11-09T21:18:48.613829+00:00] app.INFO: User logged in [] []
+[2026-11-09T21:18:48.613947+00:00] app.INFO: User {id} logged in {"id":5,"path":"/account/ünïcödé","ratio":1.0} []
+[2026-11-09T21:18:48.613966+00:00] app.WARNING: Multi-line message with [brackets] and {braces} {"tags":["a","b"]} []
+[2026-11-09T21:18:48.613976+00:00] app.ERROR: Checkout failed {"exception":"[object] (RuntimeException(code: 42): Checkout failed for order order-7 at step [payment] at /app/src/Checkout.php:14)\n[previous exception] [object] (LogicException(code: 0): Card declined:\nlimit reached at /app/src/Checkout.php:20)\n[previous exception] [object] (DomainException(code: 0): Gateway said {\"code\":\"limit\"} at /app/src/Checkout.php:20)","order":"order-7"} []

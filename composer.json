@@ -1,0 +1,64 @@
+{
+    "name": "hyphaeworks/demonolog",
+    "description": "demonolog",
+    "license": "MIT",
+    "type": "library",
+    "authors": [
+        {
+            "name": "Wolfgang Klinger",
+            "email": "wolfgang@wazum.com"
+        }
+    ],
+    "homepage": "https://github.com/hyphaeworks/demonolog",
+    "support": {
+        "issues": "https://github.com/hyphaeworks/demonolog/issues",
+        "source": "https://github.com/hyphaeworks/demonolog"
+    },
+    "require": {
+        "php": "^8.2"
+    },
+    "require-dev": {
+        "deptrac/deptrac": "^4.7",
+        "ergebnis/composer-normalize": "^2.52",
+        "friendsofphp/php-cs-fixer": "^3.75",
+        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Hyphaeworks\\Demonolog\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Hyphaeworks\\Demonolog\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "ergebnis/composer-normalize": true
+        }
+    },
+    "scripts": {
+        "analyse": "./vendor/bin/phpstan analyse --no-progress --memory-limit=512M",
+        "check": [
+            "@analyse",
+            "@deptrac",
+            "@test"
+        ],
+        "cs:check": "PHP_CS_FIXER_IGNORE_ENV=1 ./vendor/bin/php-cs-fixer fix --dry-run --diff",
+        "cs:fix": "PHP_CS_FIXER_IGNORE_ENV=1 ./vendor/bin/php-cs-fixer fix",
+        "deptrac": "./vendor/bin/deptrac analyse --no-progress",
+        "qa": [
+            "@analyse",
+            "@deptrac",
+            "@cs:check",
+            "@test"
+        ],
+        "qa:fix": [
+            "@cs:fix"
+        ],
+        "test": "./vendor/bin/phpunit"
+    }
+}

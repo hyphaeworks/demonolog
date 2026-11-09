@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Hyphaeworks\Demonolog\Reading;
+
+use Generator;
+
+/**
+ * @internal
+ */
+final readonly class Lines
+{
+    public function __construct(
+        private int $maximumLineBytes,
+    ) {
+    }
+
+    /**
+     * A line longer than the maximum is cut and the rest skipped. A file without newlines cannot fill memory.
+     *
+     * @param iterable<string> $chunks
+     *
+     * @return Generator<int, Line>
+     */
+    public function of(iterable $chunks, int $offset): Generator
+    {
+        $pending = '';
+        $skipped = 0;
+
+        foreach ($chunks as $chunk) {
+            if ($skipped > 0) {
+                $newline = strpos($chunk, "\n");
+                if ($newline === false) {
+                    $skipped += strlen($chunk);
+                    continue;
+                }
+                $skipped += $newline;
+                $chunk = substr($chunk, $newline);
+            }
+
+            $pending .= $chunk;
+            $lineStart = 0;
+            while (($newline = strpos($pending, "\n", $lineStart)) !== false) {
+                $end = $offset + $newline - $lineStart + 1 + $skipped;
+                yield new Line($offset, self::withoutCarriageReturn(substr($pending, $lineStart, $newline - $lineStart)), $end, true);
+                $offset = $end;
+                $skipped = 0;
+                $lineStart = $newline + 1;
+            }
+
+            $pending = substr($pending, $lineStart);
+            if (strlen($pending) > $this->maximumLineBytes) {
+                $skipped += strlen($pending) - $this->maximumLineBytes;
+                $pending = substr($pending, 0, $this->maximumLineBytes);
+            }
+        }
+
+        if ($pending !== '') {
+            yield new Line($offset, self::withoutCarriageReturn($pending), $offset + strlen($pending) + $skipped, false);
+        }
+    }
+
+    private static function withoutCarriageReturn(string $line): string
+    {
+        return str_ends_with($line, "\r") ? substr($line, 0, -1) : $line;
+    }
+}

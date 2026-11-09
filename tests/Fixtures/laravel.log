@@ -1,0 +1,32 @@
+[2026-11-09 21:18:48] local.INFO: Booting  
+[2026-11-09 21:18:48] local.DEBUG: select * from "users" where "id" = ? limit 1 {"bindings":[5],"time":0.42} 
+[2026-11-09 21:18:48] local.WARNING: Slow request
+for /checkout [POST] {"context":"[2026-11-09 10:15:30] local.INFO: not a header"} 
+[2026-11-09 21:18:48] local.ERROR: Checkout failed {"userId":5,"exception":"[object] (RuntimeException(code: 42): Checkout failed for order order-7 at step [payment] at /app/src/Checkout.php:14)
+[stacktrace]
+#0 /app/src/Checkout.php(26): App\\Checkout->submit('order-7')
+#1 /app/bin/generate.php(15): App\\Checkout->caught('order-7')
+#2 {main}
+
+[previous exception] [object] (LogicException(code: 0): Card declined:
+limit reached at /app/src/Checkout.php:20)
+[stacktrace]
+#0 /app/vendor/acme/runner/Runner.php(10): App\\Checkout->charge('order-7')
+#1 [internal function]: Acme\\Runner\\Runner::{closure:Acme\\Runner\\Runner::run():9}('order-7')
+#2 /app/vendor/acme/runner/Runner.php(9): array_map(Object(Closure), Array)
+#3 /app/src/Checkout.php(12): Acme\\Runner\\Runner::run(Array, Array)
+#4 /app/src/Checkout.php(26): App\\Checkout->submit('order-7')
+#5 /app/bin/generate.php(15): App\\Checkout->caught('order-7')
+#6 {main}
+
+[previous exception] [object] (DomainException(code: 0): Gateway said {\"code\":\"limit\"} at /app/src/Checkout.php:20)
+[stacktrace]
+#0 /app/vendor/acme/runner/Runner.php(10): App\\Checkout->charge('order-7')
+#1 [internal function]: Acme\\Runner\\Runner::{closure:Acme\\Runner\\Runner::run():9}('order-7')
+#2 /app/vendor/acme/runner/Runner.php(9): array_map(Object(Closure), Array)
+#3 /app/src/Checkout.php(12): Acme\\Runner\\Runner::run(Array, Array)
+#4 /app/src/Checkout.php(26): App\\Checkout->submit('order-7')
+#5 /app/bin/generate.php(15): App\\Checkout->caught('order-7')
+#6 {main}
+"} 
+[2026-11-09 21:18:48] local.INFO: After the error  

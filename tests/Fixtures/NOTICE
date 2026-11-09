@@ -1,0 +1,5 @@
+monolog*.log, laravel.log and symfony-dev.log were written by Monolog 1.27, 2.11 and 3.12
+with the default, Laravel and Symfony formatter settings; only the paths were rewritten to /app.
+
+brackets.log and brackets-fail.log are copied from https://github.com/devdot/monolog-parser
+Copyright (c) 2023 Thomas Kuschan, MIT License
