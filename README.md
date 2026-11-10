@@ -10,13 +10,15 @@ record back with its time, level, channel, message, context and exception.
 - **Exceptions as data.** The type, message, location and every stack frame of
   a logged exception, with the chain of previous exceptions. Frames inside
   `vendor/` are marked, so you can hide them.
+- **No record is lost.** Every line of the file ends up in an entry. A record
+  it cannot read comes back with a warning, never skipped and never thrown.
+- **Flat memory.** Records are read one at a time, so a file of 100 MB or
+  10 GB needs a few MiB.
 - **Large files.** Read the last entries of a file without reading the rest.
   An index of the whole file takes 16 bytes per entry and filters by level,
   channel and text.
 - **Follow a file.** New entries arrive as the file grows, and truncated or
   rotated files are noticed.
-- **Never stops on bad input.** A record it cannot read comes back as an entry
-  with a warning, not an exception.
 
 PHP 8.2+ · MIT License · No dependencies
 
