@@ -9,13 +9,15 @@ use Hyphaeworks\Demonolog\Entry\Level;
 use Hyphaeworks\Demonolog\Entry\Warning;
 use Hyphaeworks\Demonolog\Entry\WarningCode;
 use Hyphaeworks\Demonolog\Format\Format;
+use Hyphaeworks\Demonolog\Format\Header;
+use Hyphaeworks\Demonolog\Format\ReadsHeaders;
 use Hyphaeworks\Demonolog\Format\Timestamps;
 use Hyphaeworks\Demonolog\Reading\RawRecord;
 
-final readonly class LineFormat implements Format
+final readonly class LineFormat implements Format, ReadsHeaders
 {
     private const HEADER = '/^\[(?<datetime>[^\]]{8,64})\] (?<channel>[^\s:]+?)\.(?<level>[A-Za-z]{1,9}): (?<rest>.*)\z/s';
-    private const RECORD_START = '/^\[[^\]]{8,64}\] [^\s:]+?\.[A-Za-z]{1,9}: /';
+    private const RECORD_START = '/^\[[^\]]{8,64}\] (?<channel>[^\s:]+?)\.(?<level>[A-Za-z]{1,9}): /';
 
     public function __construct(
         private Timestamps $timestamps = new Timestamps(),
@@ -32,6 +34,15 @@ final readonly class LineFormat implements Format
     public function startsRecord(string $line): bool
     {
         return str_starts_with($line, '[') && preg_match(self::RECORD_START, $line) === 1;
+    }
+
+    public function header(RawRecord $record): Header
+    {
+        if (preg_match(self::RECORD_START, $record->text, $header) !== 1) {
+            return new Header(null, '');
+        }
+
+        return new Header(Level::fromName($header['level']), $header['channel']);
     }
 
     public function parse(RawRecord $record): Entry

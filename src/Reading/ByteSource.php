@@ -76,10 +76,13 @@ final readonly class ByteSource
      *
      * @return Generator<int, string>
      */
-    public function chunks(int $fromOffset = 0, int $chunkSize = 65536): Generator
+    public function chunks(int $fromOffset = 0, int $chunkSize = 65536, int $toOffset = PHP_INT_MAX): Generator
     {
         $position = $fromOffset;
-        while (fseek($this->stream, $position) === 0 && ($chunk = fread($this->stream, $chunkSize)) !== false && $chunk !== '') {
+        while ($position < $toOffset
+            && fseek($this->stream, $position) === 0
+            && ($chunk = fread($this->stream, max(1, min($chunkSize, $toOffset - $position)))) !== false
+            && $chunk !== '') {
             $position += strlen($chunk);
             yield $chunk;
         }

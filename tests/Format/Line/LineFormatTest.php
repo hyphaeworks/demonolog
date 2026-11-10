@@ -163,6 +163,29 @@ final class LineFormatTest extends TestCase
     }
 
     /**
+     * @return iterable<string, array{string}>
+     */
+    public static function records(): iterable
+    {
+        yield 'symfony' => ['[2026-11-10T10:00:00.123456+01:00] request.CRITICAL: Uncaught {"exception":"[object] (E(code: 0): x at /a.php:1)"} []'];
+        yield 'custom level' => ['[2026-11-10 10:00:00] my.app.NOTI: short level name [] []'];
+        yield 'no record' => ['PHP Fatal error: out of memory'];
+    }
+
+    #[Test]
+    #[DataProvider('records')]
+    public function readsTheSameHeaderAsAFullParse(string $text): void
+    {
+        $format = new LineFormat();
+        $record = new RawRecord(0, $text);
+
+        $header = $format->header($record);
+        $entry = $format->parse($record);
+
+        self::assertSame([$entry->level, $entry->channel], [$header->level, $header->channel]);
+    }
+
+    /**
      * @return list<WarningCode>
      */
     private static function warningCodes(Entry $entry): array

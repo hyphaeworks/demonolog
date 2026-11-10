@@ -17,9 +17,10 @@ $format = $layer('Format', 'Format/[^/]+[.]php$');
 $lineFormat = $layer('Format\Line', 'Format/Line/.*');
 $jsonFormat = $layer('Format\Json', 'Format/Json/.*');
 $following = $layer('Following', 'Following/.*');
+$index = $layer('Index', 'Index/.*');
 $facade = $layer('Facade', '[^/]+[.]php$');
 
-$layers = [$loggedException, $entry, $reading, $format, $lineFormat, $jsonFormat, $following, $facade];
+$layers = [$loggedException, $entry, $reading, $format, $lineFormat, $jsonFormat, $following, $index, $facade];
 $rules = [
     [$loggedException],
     [$entry, $loggedException],
@@ -28,6 +29,7 @@ $rules = [
     [$lineFormat, $format, $entry, $loggedException, $reading],
     [$jsonFormat, $format, $entry, $loggedException, $reading],
     [$following, $format, $entry, $reading],
+    [$index, $format, $entry, $reading],
     [$facade, ...array_filter($layers, static fn (Layer $candidate): bool => $candidate !== $facade)],
 ];
 
