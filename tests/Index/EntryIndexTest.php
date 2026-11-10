@@ -133,14 +133,18 @@ final class EntryIndexTest extends TestCase
         $index = (new Demonolog())->open($path)->index();
 
         $index->grow();
-        self::assertCount(1, $index);
+        $filtered = $index->filter(new Filter(text: 'tw'));
+        self::assertCount(2, $index);
+        self::assertCount(1, $filtered);
 
         file_put_contents($path, "o [] []\n[2026-11-10 10:00:02] app.INFO: three [] []\n", FILE_APPEND);
         $index->grow();
+        $filtered->grow();
         unlink($path);
 
         self::assertCount(3, $index);
         self::assertSame(42, $index->offsetAt(1));
+        self::assertCount(1, $filtered);
     }
 
     #[Test]

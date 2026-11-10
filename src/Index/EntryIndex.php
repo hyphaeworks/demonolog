@@ -25,6 +25,7 @@ final class EntryIndex implements Countable
     private readonly RecordFramer $framer;
     private string $entries = '';
     private int $resumeAt = 0;
+    private ?int $unterminatedAt = null;
 
     /**
      * @var array<string, int>
@@ -57,14 +58,22 @@ final class EntryIndex implements Countable
     /**
      * Reads up to the given number of bytes and returns whether it reached the end of the file.
      * The last record read may go on after the limit, so it is read again on the next call.
+     * So is a last record without a newline, which may still be being written.
      */
     public function grow(int $maximumBytes = PHP_INT_MAX): bool
     {
+        if ($this->unterminatedAt !== null) {
+            if ($this->count() > 0 && $this->offsetAt($this->count() - 1) === $this->unterminatedAt) {
+                $this->entries = substr($this->entries, 0, -self::ENTRY_BYTES);
+            }
+            $this->resumeAt = $this->unterminatedAt;
+            $this->unterminatedAt = null;
+        }
         $size = $this->source->size();
         for ($window = max(1, $maximumBytes);; $window *= 2) {
             $atEnd = $window >= $size - $this->resumeAt;
             $until = $atEnd ? $size : $this->resumeAt + $window;
-            $records = $this->framer->records($this->source->chunks($this->resumeAt, toOffset: $until), $this->resumeAt, holdPartialTail: true);
+            $records = $this->framer->records($this->source->chunks($this->resumeAt, toOffset: $until), $this->resumeAt, holdPartialTail: !$atEnd);
 
             $last = null;
             foreach ($records as $record) {
@@ -77,6 +86,9 @@ final class EntryIndex implements Countable
             if ($atEnd) {
                 if ($last !== null) {
                     $this->add($last, $records->getReturn());
+                    if ($this->source->read($size - 1, 1) !== "\n") {
+                        $this->unterminatedAt = $last->offset;
+                    }
                 }
                 $this->resumeAt = $records->getReturn();
 
