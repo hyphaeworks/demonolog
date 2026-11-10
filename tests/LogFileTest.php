@@ -30,6 +30,18 @@ final class LogFileTest extends TestCase
     }
 
     #[Test]
+    public function aLogLineInsideInlineContextSplitsTheRecordButKeepsEveryLine(): void
+    {
+        $log = "[2026-11-10 10:00:00] app.ERROR: command failed {\"output\":\"\n[2026-11-10 09:59:59] child.ERROR: inner failure\n\"}\n[2026-11-10 10:00:01] app.INFO: next [] []\n";
+
+        $entries = iterator_to_array((new Demonolog())->fromString($log)->entries(), false);
+
+        self::assertSame(['app', 'child', 'app'], array_map(static fn (Entry $entry): string => $entry->channel, $entries));
+        self::assertNotSame([], $entries[1]->warnings);
+        self::assertSame($log, implode('', array_map(static fn (Entry $entry): string => $entry->raw . "\n", $entries)));
+    }
+
+    #[Test]
     public function tailFindsTheRecordAfterAVeryLongLine(): void
     {
         $log = '[2026-11-10 10:00:00] app.INFO: ' . str_repeat('x', 100000) . " [] []\n[2026-11-10 10:00:01] app.INFO: last [] []\n";
