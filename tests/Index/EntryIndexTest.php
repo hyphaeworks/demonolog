@@ -64,6 +64,16 @@ final class EntryIndexTest extends TestCase
     }
 
     #[Test]
+    public function findsTextOnTheLastLineOfARecordWithCarriageReturns(): void
+    {
+        $filtered = $this->index("[2026-11-10 10:00:00] app.INFO: other [] []\r\n[2026-11-10 10:00:01] app.ERROR: first\r\nsecond\r\nneedle\r\n")
+            ->filter(new Filter(text: 'needle'));
+
+        self::assertCount(1, $filtered);
+        self::assertSame(45, $filtered->offsetAt(0));
+    }
+
+    #[Test]
     public function combinesTheConditions(): void
     {
         $filtered = $this->index(self::LOG)->filter(new Filter(minimumLevel: Level::Info, channels: ['app'], text: 'failed'));

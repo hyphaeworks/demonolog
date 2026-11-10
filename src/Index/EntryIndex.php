@@ -19,6 +19,8 @@ final class EntryIndex implements Countable
     private const ENTRY_BYTES = 16;
     // Channel ids have 16 bits. Channels beyond that share this id, which no channel filter matches.
     private const OVERFLOW_CHANNEL = 0xFFFF;
+    // A record holds at most 1 MiB of text plus one carriage return per line. Bytes skipped from a cut line are not searched.
+    private const MAXIMUM_LENGTH = 2 * 1048576;
 
     private readonly RecordFramer $framer;
     private string $entries = '';
@@ -67,14 +69,14 @@ final class EntryIndex implements Countable
             $last = null;
             foreach ($records as $record) {
                 if ($last !== null) {
-                    $this->add($last);
+                    $this->add($last, $record->offset);
                 }
                 $last = $record;
             }
 
             if ($atEnd) {
                 if ($last !== null) {
-                    $this->add($last);
+                    $this->add($last, $records->getReturn());
                 }
                 $this->resumeAt = $records->getReturn();
 
@@ -108,11 +110,11 @@ final class EntryIndex implements Countable
         return $filtered;
     }
 
-    private function add(RawRecord $record): void
+    private function add(RawRecord $record, int $end): void
     {
         $header = $this->format instanceof ReadsHeaders ? $this->format->header($record) : $this->format->parse($record);
         $level = $header->level->value ?? 0;
-        $length = strlen($record->text);
+        $length = min($end - $record->offset, self::MAXIMUM_LENGTH);
         if (!$this->matches($record->offset, $length, $level, $header->channel)) {
             return;
         }
