@@ -23,7 +23,9 @@ final class EntryIndex implements Countable
     private const MAXIMUM_LENGTH = 2 * 1048576;
 
     private readonly RecordFramer $framer;
-    private string $entries = '';
+    private string $all = '';
+    // The entries that pass the filter, or null when the index is not filtered and they are all of them.
+    private ?string $matching = null;
     private int $resumeAt = 0;
     private ?int $unterminatedAt = null;
     private Filter $filter;
@@ -48,12 +50,12 @@ final class EntryIndex implements Countable
 
     public function count(): int
     {
-        return strlen($this->entries) >> 4;
+        return strlen($this->matching ?? $this->all) >> 4;
     }
 
     public function offsetAt(int $position): int
     {
-        return $this->unpacked($position * self::ENTRY_BYTES)['offset'];
+        return $this->unpacked($this->matching ?? $this->all, $position * self::ENTRY_BYTES)['offset'];
     }
 
     /**
@@ -64,8 +66,9 @@ final class EntryIndex implements Countable
     public function grow(int $maximumBytes = PHP_INT_MAX): bool
     {
         if ($this->unterminatedAt !== null) {
-            if ($this->count() > 0 && $this->offsetAt($this->count() - 1) === $this->unterminatedAt) {
-                $this->entries = substr($this->entries, 0, -self::ENTRY_BYTES);
+            $this->all = substr($this->all, 0, -self::ENTRY_BYTES);
+            if ($this->matching !== null && $this->count() > 0 && $this->offsetAt($this->count() - 1) === $this->unterminatedAt) {
+                $this->matching = substr($this->matching, 0, -self::ENTRY_BYTES);
             }
             $this->resumeAt = $this->unterminatedAt;
             $this->unterminatedAt = null;
@@ -104,19 +107,19 @@ final class EntryIndex implements Countable
     }
 
     /**
-     * The filtered index keeps the filter when it grows.
+     * The filter replaces the one this index may have, and stays when the filtered index grows.
      */
     public function filter(Filter $filter): self
     {
         $filtered = clone $this;
         $filtered->filter = $filter;
         $filtered->wantedChannels = array_fill_keys($filter->channels, true);
-        $filtered->entries = '';
+        $filtered->matching = '';
         $channelNames = array_flip($this->channelIds);
-        for ($at = 0, $end = strlen($this->entries); $at < $end; $at += self::ENTRY_BYTES) {
-            $entry = $this->unpacked($at);
+        for ($at = 0, $end = strlen($this->all); $at < $end; $at += self::ENTRY_BYTES) {
+            $entry = $this->unpacked($this->all, $at);
             if ($filtered->matches($entry['offset'], $entry['length'], $entry['level'], $channelNames[$entry['channel']] ?? null)) {
-                $filtered->entries .= substr($this->entries, $at, self::ENTRY_BYTES);
+                $filtered->matching .= substr($this->all, $at, self::ENTRY_BYTES);
             }
         }
 
@@ -128,14 +131,15 @@ final class EntryIndex implements Countable
         $header = $this->format instanceof ReadsHeaders ? $this->format->header($record) : $this->format->parse($record);
         $level = $header->level->value ?? 0;
         $length = min($end - $record->offset, self::MAXIMUM_LENGTH);
-        if (!$this->matches($record->offset, $length, $level, $header->channel)) {
-            return;
-        }
         $channelId = $this->channelIds[$header->channel] ?? self::OVERFLOW_CHANNEL;
         if ($channelId === self::OVERFLOW_CHANNEL && count($this->channelIds) < self::OVERFLOW_CHANNEL) {
             $channelId = $this->channelIds[$header->channel] = count($this->channelIds);
         }
-        $this->entries .= pack(self::LAYOUT, $record->offset, $length, $level, $channelId);
+        $entry = pack(self::LAYOUT, $record->offset, $length, $level, $channelId);
+        $this->all .= $entry;
+        if ($this->matching !== null && $this->matches($record->offset, $length, $level, $header->channel)) {
+            $this->matching .= $entry;
+        }
     }
 
     private function matches(int $offset, int $length, int $level, ?string $channel): bool
@@ -148,12 +152,12 @@ final class EntryIndex implements Countable
     /**
      * @return array{offset: int, length: int, level: int, channel: int}
      */
-    private function unpacked(int $at): array
+    private function unpacked(string $entries, int $at): array
     {
         /**
          * @var array{offset: int, length: int, level: int, channel: int} $entry
          */
-        $entry = unpack(self::UNPACK, $this->entries, $at);
+        $entry = unpack(self::UNPACK, $entries, $at);
 
         return $entry;
     }

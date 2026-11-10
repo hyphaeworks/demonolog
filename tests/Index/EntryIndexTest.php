@@ -98,6 +98,25 @@ final class EntryIndexTest extends TestCase
     }
 
     #[Test]
+    public function aNewFilterReplacesThePreviousOne(): void
+    {
+        $path = (string)tempnam(sys_get_temp_dir(), 'demonolog');
+        file_put_contents($path, "[2026-11-10 10:00:00] app.ERROR: one [] []\n");
+        $index = (new Demonolog())->open($path)->index();
+        $index->grow();
+        $errors = $index->filter(new Filter(minimumLevel: Level::Error));
+
+        file_put_contents($path, "[2026-11-10 10:00:01] app.INFO: two [] []\n", FILE_APPEND);
+        $errors->grow();
+        $everything = $errors->filter(new Filter(minimumLevel: Level::Info));
+        file_put_contents($path, "[2026-11-10 10:00:02] app.INFO: three [] []\n", FILE_APPEND);
+        $everything->grow();
+        unlink($path);
+
+        self::assertSame([0, 43, 85], array_map($everything->offsetAt(...), range(0, count($everything) - 1)));
+    }
+
+    #[Test]
     public function channelsBeyondTheIdRangeNeverMatchAnotherChannel(): void
     {
         $log = '';
