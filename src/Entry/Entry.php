@@ -46,4 +46,21 @@ final readonly class Entry
             warnings: [$warning],
         );
     }
+
+    public function withWarning(Warning $warning): self
+    {
+        return new self(
+            $this->offset,
+            $this->raw,
+            $this->timestamp,
+            $this->channel,
+            $this->level,
+            $this->levelName,
+            $this->message,
+            $this->context,
+            $this->extra,
+            $this->exception,
+            [...$this->warnings, $warning],
+        );
+    }
 }

@@ -6,6 +6,7 @@ namespace Hyphaeworks\Demonolog\Tests\Following;
 
 use Hyphaeworks\Demonolog\Demonolog;
 use Hyphaeworks\Demonolog\Entry\Entry;
+use Hyphaeworks\Demonolog\Entry\WarningCode;
 use Hyphaeworks\Demonolog\Following\Update;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -28,6 +29,16 @@ final class FollowerTest extends TestCase
         self::assertSame(['first', 'second'], self::messages($update));
         self::assertFalse($update->restarted);
         self::assertSame([], self::messages($follower->poll()));
+    }
+
+    #[Test]
+    public function warnsAboutALineCutAtTheRecordCap(): void
+    {
+        $follower = (new Demonolog())->open($this->path)->follow();
+
+        file_put_contents($this->path, '[2026-11-10 10:00:01] app.INFO: ' . str_repeat('x', 1_200_000) . " [] []\n", FILE_APPEND);
+
+        self::assertSame(WarningCode::Truncated, $follower->poll()->entries[0]->warnings[0]->code ?? null);
     }
 
     #[Test]

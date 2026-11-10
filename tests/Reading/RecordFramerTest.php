@@ -82,7 +82,7 @@ final class RecordFramerTest extends TestCase
         $records = $framer->records($chunks);
 
         self::assertEquals(
-            [new RawRecord(0, '[a] xxxxxxxx'), new RawRecord(35, '[b] next'), new RawRecord(44, '[c] yyyyyyyy')],
+            [new RawRecord(0, '[a] xxxxxxxx', truncated: true), new RawRecord(35, '[b] next'), new RawRecord(44, '[c] yyyyyyyy', truncated: true)],
             iterator_to_array($records, false),
         );
         self::assertSame(68, $records->getReturn());

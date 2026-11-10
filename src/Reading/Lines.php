@@ -43,7 +43,7 @@ final readonly class Lines
             $lineStart = 0;
             while (($newline = strpos($pending, "\n", $lineStart)) !== false) {
                 $end = $offset + $newline - $lineStart + 1 + $skipped;
-                yield new Line($offset, self::withoutCarriageReturn(substr($pending, $lineStart, $newline - $lineStart)), $end, true);
+                yield new Line($offset, self::withoutCarriageReturn(substr($pending, $lineStart, $newline - $lineStart)), $end, true, $skipped > 0);
                 $offset = $end;
                 $skipped = 0;
                 $lineStart = $newline + 1;
@@ -57,7 +57,7 @@ final readonly class Lines
         }
 
         if ($pending !== '') {
-            yield new Line($offset, self::withoutCarriageReturn($pending), $offset + strlen($pending) + $skipped, false);
+            yield new Line($offset, self::withoutCarriageReturn($pending), $offset + strlen($pending) + $skipped, false, $skipped > 0);
         }
     }
 

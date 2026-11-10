@@ -9,33 +9,37 @@ namespace Hyphaeworks\Demonolog\Reading;
  */
 final class OpenRecord
 {
+    public readonly int $offset;
+
     /**
      * @var list<string>
      */
     private array $lines;
     private int $bytes;
+    private bool $truncated;
 
-    public function __construct(
-        public readonly int $offset,
-        string $firstLine,
-    ) {
-        $this->lines = [$firstLine];
-        $this->bytes = strlen($firstLine);
+    public function __construct(Line $firstLine)
+    {
+        $this->offset = $firstLine->offset;
+        $this->lines = [$firstLine->text];
+        $this->bytes = strlen($firstLine->text);
+        $this->truncated = $firstLine->truncated;
     }
 
-    public function append(string $line): void
+    public function append(Line $line): void
     {
-        $this->lines[] = $line;
-        $this->bytes += 1 + strlen($line);
+        $this->lines[] = $line->text;
+        $this->bytes += 1 + strlen($line->text);
+        $this->truncated = $this->truncated || $line->truncated;
     }
 
-    public function bytesWith(string $line): int
+    public function bytesWith(Line $line): int
     {
-        return $this->bytes + 1 + strlen($line);
+        return $this->bytes + 1 + strlen($line->text);
     }
 
     public function toRecord(): RawRecord
     {
-        return new RawRecord($this->offset, implode("\n", $this->lines));
+        return new RawRecord($this->offset, implode("\n", $this->lines), $this->truncated);
     }
 }

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Hyphaeworks\Demonolog\Following;
 
 use Hyphaeworks\Demonolog\Entry\Entry;
+use Hyphaeworks\Demonolog\Entry\Warning;
+use Hyphaeworks\Demonolog\Entry\WarningCode;
 use Hyphaeworks\Demonolog\Format\Format;
 use Hyphaeworks\Demonolog\Reading\ByteSource;
 use Hyphaeworks\Demonolog\Reading\RecordFramer;
@@ -57,7 +59,8 @@ final class Follower
         $records = $this->framer->records($this->source->chunks($this->offset), $this->offset, $holdPartialTail);
         $entries = [];
         foreach ($records as $record) {
-            $entries[] = $this->format->parse($record);
+            $entry = $this->format->parse($record);
+            $entries[] = $record->truncated ? $entry->withWarning(new Warning(WarningCode::Truncated, 'A line was longer than 1 MiB, so its end is missing')) : $entry;
         }
         $this->offset = $records->getReturn();
         $this->fingerprint = $this->fingerprintAt($this->offset);

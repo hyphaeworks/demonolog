@@ -10,4 +10,5 @@ enum WarningCode
     case ContextJson;
     case Timestamp;
     case Pcre;
+    case Truncated;
 }

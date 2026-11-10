@@ -14,6 +14,7 @@ final readonly class Line
         public string $text,
         public int $end,
         public bool $terminated,
+        public bool $truncated = false,
     ) {
     }
 }

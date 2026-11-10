@@ -44,7 +44,7 @@ final readonly class RecordFramer
                 if ($stillBeingWritten) {
                     return $open->offset;
                 }
-                $open->append($line->text);
+                $open->append($line);
                 $resumeAt = $line->end;
                 continue;
             }
@@ -55,7 +55,7 @@ final readonly class RecordFramer
             if ($stillBeingWritten) {
                 return $line->offset;
             }
-            $open = new OpenRecord($line->offset, $line->text);
+            $open = new OpenRecord($line);
             $resumeAt = $line->end;
         }
 
@@ -68,6 +68,6 @@ final readonly class RecordFramer
 
     private function startsRecord(OpenRecord $open, Line $line): bool
     {
-        return ($this->startsRecord)($line->text) || $open->bytesWith($line->text) > $this->maximumRecordBytes;
+        return ($this->startsRecord)($line->text) || $open->bytesWith($line) > $this->maximumRecordBytes;
     }
 }

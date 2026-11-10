@@ -6,6 +6,8 @@ namespace Hyphaeworks\Demonolog;
 
 use Generator;
 use Hyphaeworks\Demonolog\Entry\Entry;
+use Hyphaeworks\Demonolog\Entry\Warning;
+use Hyphaeworks\Demonolog\Entry\WarningCode;
 use Hyphaeworks\Demonolog\Following\Follower;
 use Hyphaeworks\Demonolog\Format\Format;
 use Hyphaeworks\Demonolog\Index\EntryIndex;
@@ -32,7 +34,8 @@ final readonly class LogFile
     public function entries(int $fromOffset = 0): Generator
     {
         foreach ($this->framer->records($this->source->chunks($fromOffset), $fromOffset) as $record) {
-            yield $this->format->parse($record);
+            $entry = $this->format->parse($record);
+            yield $record->truncated ? $entry->withWarning(new Warning(WarningCode::Truncated, 'A line was longer than 1 MiB, so its end is missing')) : $entry;
         }
     }
 

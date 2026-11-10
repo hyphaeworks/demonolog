@@ -6,6 +6,8 @@ namespace Hyphaeworks\Demonolog\Tests;
 
 use Hyphaeworks\Demonolog\Demonolog;
 use Hyphaeworks\Demonolog\Entry\Entry;
+use Hyphaeworks\Demonolog\Entry\Warning;
+use Hyphaeworks\Demonolog\Entry\WarningCode;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -39,6 +41,17 @@ final class LogFileTest extends TestCase
         self::assertSame(['app', 'child', 'app'], array_map(static fn (Entry $entry): string => $entry->channel, $entries));
         self::assertNotSame([], $entries[1]->warnings);
         self::assertSame($log, implode('', array_map(static fn (Entry $entry): string => $entry->raw . "\n", $entries)));
+    }
+
+    #[Test]
+    public function aLineCutAtTheRecordCapComesWithAWarning(): void
+    {
+        $log = '[2026-11-10 10:00:00] app.INFO: ' . str_repeat('x', 1_200_000) . " [] []\n[2026-11-10 10:00:01] app.INFO: next [] []\n";
+
+        $entries = iterator_to_array((new Demonolog())->fromString($log)->entries(), false);
+
+        self::assertSame([WarningCode::Truncated], array_map(static fn (Warning $warning): WarningCode => $warning->code, $entries[0]->warnings));
+        self::assertSame([], $entries[1]->warnings);
     }
 
     #[Test]
