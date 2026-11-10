@@ -26,6 +26,7 @@ final class EntryIndex implements Countable
     private string $entries = '';
     private int $resumeAt = 0;
     private ?int $unterminatedAt = null;
+    private Filter $filter;
 
     /**
      * @var array<string, int>
@@ -40,9 +41,9 @@ final class EntryIndex implements Countable
     public function __construct(
         private readonly ByteSource $source,
         private readonly Format $format,
-        private Filter $filter = new Filter(),
     ) {
         $this->framer = new RecordFramer($format->startsRecord(...));
+        $this->filter = new Filter();
     }
 
     public function count(): int
