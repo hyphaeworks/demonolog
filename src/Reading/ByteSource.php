@@ -17,6 +17,7 @@ final readonly class ByteSource
      */
     private function __construct(
         private mixed $stream,
+        public ?string $path = null,
     ) {
     }
 
@@ -27,7 +28,7 @@ final readonly class ByteSource
             throw new RuntimeException(sprintf('Cannot read %s', $path));
         }
 
-        return new self($stream);
+        return new self($stream, $path);
     }
 
     public static function fromString(string $bytes): self
@@ -39,6 +40,28 @@ final readonly class ByteSource
         fwrite($stream, $bytes);
 
         return new self($stream);
+    }
+
+    public function size(): int
+    {
+        $status = fstat($this->stream);
+
+        return $status === false ? 0 : $status['size'];
+    }
+
+    public function isReplaced(): bool
+    {
+        if ($this->path === null) {
+            return false;
+        }
+        clearstatcache(true, $this->path);
+        $file = is_file($this->path) ? stat($this->path) : false;
+        $stream = fstat($this->stream);
+        if ($file === false || $stream === false) {
+            return false;
+        }
+
+        return $file['dev'] !== $stream['dev'] || $file['ino'] !== $stream['ino'];
     }
 
     public function read(int $offset, int $length): string
@@ -55,8 +78,9 @@ final readonly class ByteSource
      */
     public function chunks(int $fromOffset = 0, int $chunkSize = 65536): Generator
     {
-        fseek($this->stream, $fromOffset);
-        while (($chunk = fread($this->stream, $chunkSize)) !== false && $chunk !== '') {
+        $position = $fromOffset;
+        while (fseek($this->stream, $position) === 0 && ($chunk = fread($this->stream, $chunkSize)) !== false && $chunk !== '') {
+            $position += strlen($chunk);
             yield $chunk;
         }
     }

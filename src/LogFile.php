@@ -6,6 +6,7 @@ namespace Hyphaeworks\Demonolog;
 
 use Generator;
 use Hyphaeworks\Demonolog\Entry\Entry;
+use Hyphaeworks\Demonolog\Following\Follower;
 use Hyphaeworks\Demonolog\Format\Format;
 use Hyphaeworks\Demonolog\Reading\ByteSource;
 use Hyphaeworks\Demonolog\Reading\RecordFramer;
@@ -29,5 +30,10 @@ final readonly class LogFile
         foreach ($this->framer->records($this->source->chunks($fromOffset), $fromOffset) as $record) {
             yield $this->format->parse($record);
         }
+    }
+
+    public function follow(?int $fromOffset = null): Follower
+    {
+        return new Follower($this->source, $this->format, $fromOffset ?? $this->source->size());
     }
 }
