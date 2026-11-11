@@ -11,8 +11,8 @@ Added:
 
 Changed:
 
-- `EntryIndex::grow()` returns a `Growth` with `atEnd` and `restarted`
-  instead of a bool.
+- `EntryIndex::grow()` returns a `Growth` instead of a bool. It has `atEnd`,
+  `restarted`, and `indexedBytes` and `fileBytes` for a progress bar.
 - `LineFormat` takes `Timestamps` and `ApplicationFrames`, like `JsonFormat`.
   It no longer takes the internal `ContextSplitter` and `ExceptionText`.
 - `EntryIndex` no longer takes a `Filter` in its constructor. Use `filter()`,

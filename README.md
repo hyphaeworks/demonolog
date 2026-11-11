@@ -105,8 +105,19 @@ for ($row = 0; $row < count($errors); ++$row) {
 ```
 
 `grow(maximumBytes: 1_000_000)` reads in steps and returns a `Growth`. Call it
-until `atEnd` is true. A later `grow()` adds the entries written since. A
-filtered index keeps its filter when it grows.
+until `atEnd` is true, and use `indexedBytes` and `fileBytes` for a progress
+bar:
+
+```php
+do {
+    $growth = $index->grow(maximumBytes: 4_000_000);
+    printf("\rIndexing %d of %d bytes", $growth->indexedBytes, $growth->fileBytes);
+} while (!$growth->atEnd);
+```
+
+At the end both numbers are equal. An empty file reports 0 of 0. A later
+`grow()` adds the entries written since. A filtered index keeps its filter when
+it grows.
 
 When the file was rotated, truncated or rewritten, `grow()` reads it again from
 the start and reports `restarted`, so a viewer knows its rows are gone.
