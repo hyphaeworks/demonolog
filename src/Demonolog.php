@@ -8,6 +8,7 @@ use Hyphaeworks\Demonolog\Format\Format;
 use Hyphaeworks\Demonolog\Format\Json\JsonFormat;
 use Hyphaeworks\Demonolog\Format\Line\LineFormat;
 use Hyphaeworks\Demonolog\Reading\ByteSource;
+use Hyphaeworks\Demonolog\Reading\Lines;
 
 final readonly class Demonolog
 {
@@ -39,6 +40,7 @@ final readonly class Demonolog
 
     private function detect(string $sample): Format
     {
+        $sample = Lines::withoutByteOrderMark($sample);
         foreach ($this->formats as $format) {
             if ($format->detect($sample)) {
                 return $format;

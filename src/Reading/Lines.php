@@ -11,6 +11,8 @@ use Generator;
  */
 final readonly class Lines
 {
+    private const BYTE_ORDER_MARK = "\xEF\xBB\xBF";
+
     public function __construct(
         private int $maximumLineBytes,
     ) {
@@ -43,7 +45,7 @@ final readonly class Lines
             $lineStart = 0;
             while (($newline = strpos($pending, "\n", $lineStart)) !== false) {
                 $end = $offset + $newline - $lineStart + 1 + $skipped;
-                yield new Line($offset, self::withoutCarriageReturn(substr($pending, $lineStart, $newline - $lineStart)), $end, true, $skipped > 0);
+                yield new Line($offset, self::text($offset, substr($pending, $lineStart, $newline - $lineStart)), $end, true, $skipped > 0);
                 $offset = $end;
                 $skipped = 0;
                 $lineStart = $newline + 1;
@@ -57,12 +59,19 @@ final readonly class Lines
         }
 
         if ($pending !== '') {
-            yield new Line($offset, self::withoutCarriageReturn($pending), $offset + strlen($pending) + $skipped, false, $skipped > 0);
+            yield new Line($offset, self::text($offset, $pending), $offset + strlen($pending) + $skipped, false, $skipped > 0);
         }
     }
 
-    private static function withoutCarriageReturn(string $line): string
+    public static function withoutByteOrderMark(string $text): string
     {
-        return str_ends_with($line, "\r") ? substr($line, 0, -1) : $line;
+        return str_starts_with($text, self::BYTE_ORDER_MARK) ? substr($text, strlen(self::BYTE_ORDER_MARK)) : $text;
+    }
+
+    private static function text(int $offset, string $line): string
+    {
+        $line = str_ends_with($line, "\r") ? substr($line, 0, -1) : $line;
+
+        return $offset === 0 ? self::withoutByteOrderMark($line) : $line;
     }
 }

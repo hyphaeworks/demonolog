@@ -46,6 +46,18 @@ final class DemonologTest extends TestCase
     }
 
     #[Test]
+    public function readsJsonRecordsAfterAByteOrderMark(): void
+    {
+        $log = "\xEF\xBB\xBF" . '{"message":"Started","context":{},"level":200,"level_name":"INFO","channel":"app","datetime":"2026-11-09T10:15:30+00:00","extra":{}}' . "\n"
+            . '{"message":"Failed","context":{},"level":400,"level_name":"ERROR","channel":"app","datetime":"2026-11-09T10:15:31+00:00","extra":{}}' . "\n";
+
+        $entries = iterator_to_array((new Demonolog())->fromString($log)->entries(), false);
+
+        self::assertSame(['Started', 'Failed'], array_map(static fn (Entry $entry): string => $entry->message, $entries));
+        self::assertSame([], $entries[0]->warnings);
+    }
+
+    #[Test]
     public function detectsAFormatAddedByAnotherPackageFirst(): void
     {
         $format = new class implements Format {
