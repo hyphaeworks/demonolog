@@ -205,7 +205,7 @@ final class EntryIndexTest extends TestCase
         $index = (new Demonolog())->fromString(self::LOG)->index();
 
         $steps = 1;
-        while (!$index->grow(maximumBytes: 120)->atEnd) {
+        while (!$index->grow(maximumBytes: 120)->atEnd()) {
             ++$steps;
         }
 
@@ -223,7 +223,7 @@ final class EntryIndexTest extends TestCase
         $growth = $index->grow(maximumBytes: 120);
 
         $offsets = array_map(static fn (Entry $entry): int => $entry->offset, iterator_to_array($log->entries(), false));
-        self::assertFalse($growth->atEnd);
+        self::assertFalse($growth->atEnd());
         self::assertSame($offsets[count($index)], $growth->indexedBytes);
         self::assertSame(strlen(self::LOG), $growth->fileBytes);
     }
@@ -236,7 +236,7 @@ final class EntryIndexTest extends TestCase
 
         do {
             $growth = $index->grow(maximumBytes: 120);
-        } while (!$growth->atEnd);
+        } while (!$growth->atEnd());
 
         self::assertSame([strlen($log), strlen($log)], [$growth->indexedBytes, $growth->fileBytes]);
     }

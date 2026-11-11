@@ -108,14 +108,14 @@ for ($row = 0; $row < count($errors); ++$row) {
 menu. A filtered index lists them all, not only the ones it keeps.
 
 `grow(maximumBytes: 1_000_000)` reads in steps and returns a `Growth`. Call it
-until `atEnd` is true, and use `indexedBytes` and `fileBytes` for a progress
+until `atEnd()` is true, and use `indexedBytes` and `fileBytes` for a progress
 bar:
 
 ```php
 do {
     $growth = $index->grow(maximumBytes: 4_000_000);
     printf("\rIndexing %d of %d bytes", $growth->indexedBytes, $growth->fileBytes);
-} while (!$growth->atEnd);
+} while (!$growth->atEnd());
 ```
 
 At the end both numbers are equal. An empty file reports 0 of 0. A later

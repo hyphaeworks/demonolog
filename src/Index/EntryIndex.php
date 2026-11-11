@@ -103,10 +103,10 @@ final class EntryIndex implements Countable
                     $this->add($last, $records->getReturn());
                 }
 
-                return $this->stopAt($records->getReturn(), $size, atEnd: true, restarted: $restarted, openRecordAt: $last?->offset);
+                return $this->stopAt($records->getReturn(), $size, $restarted, openRecordAt: $last?->offset);
             }
             if ($last !== null && $last->offset > $resumeAt) {
-                return $this->stopAt($last->offset, $size, atEnd: false, restarted: $restarted, openRecordAt: null);
+                return $this->stopAt($last->offset, $size, $restarted, openRecordAt: null);
             }
         }
     }
@@ -155,10 +155,10 @@ final class EntryIndex implements Countable
         $this->filtered?->offer($row, $this->file->channelName($row['channel']), $this->source);
     }
 
-    private function stopAt(int $offset, int $size, bool $atEnd, bool $restarted, ?int $openRecordAt): Growth
+    private function stopAt(int $offset, int $size, bool $restarted, ?int $openRecordAt): Growth
     {
         $this->file->stopAt($offset, $this->fingerprintAt($offset), $openRecordAt);
 
-        return new Growth(atEnd: $atEnd, restarted: $restarted, indexedBytes: $offset, fileBytes: $size);
+        return new Growth(restarted: $restarted, indexedBytes: $offset, fileBytes: $size);
     }
 }
