@@ -139,6 +139,7 @@ An entry that was not read cleanly still comes back, with a list of
 | `Timestamp`   | The time is not in a known format, so `timestamp` is null. |
 | `Pcre`        | A regular expression hit a PCRE limit. |
 | `Truncated`   | A line was longer than 1 MiB, so its end is missing. |
+| `Invalid`     | The format built an entry that breaks a rule, for example an empty channel name, so `message` holds the raw text. |
 
 ## Time zone and vendor paths
 
@@ -168,6 +169,10 @@ $demonolog = new Demonolog(new MyFormat());
 ```
 
 `open($path, new MyFormat())` skips detection.
+
+An entry checks its values: a channel is a name or null, and a level matches a
+known level name. If your format breaks a rule, the record still comes back,
+as an unparsed entry with an `Invalid` warning.
 
 ## License
 
