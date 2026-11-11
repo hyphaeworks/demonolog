@@ -107,6 +107,36 @@ for ($row = 0; $row < count($errors); ++$row) {
 `grow(maximumBytes: 1_000_000)` reads in steps, and a later `grow()` adds the
 entries written since. A filtered index keeps its filter when it grows.
 
+## Warnings
+
+An entry that was not read cleanly still comes back, with a list of
+`$entry->warnings`. Each warning has a `code` and a `message`:
+
+| `WarningCode` | Meaning |
+|---------------|---------|
+| `Unparsed`    | The record is not in the format, so `message` holds the raw text. |
+| `ContextJson` | The context or extra of a line record is not valid JSON. |
+| `Timestamp`   | The time is not in a known format, so `timestamp` is null. |
+| `Pcre`        | A regular expression hit a PCRE limit. |
+| `Truncated`   | A line was longer than 1 MiB, so its end is missing. |
+
+## Time zone and vendor paths
+
+A time without a zone is read as UTC. Frames whose file is inside `vendor/`
+have `inApp` set to false. To change either, pass both formats with your
+settings:
+
+```php
+use Hyphaeworks\Demonolog\Format\Json\JsonFormat;
+use Hyphaeworks\Demonolog\Format\Line\LineFormat;
+use Hyphaeworks\Demonolog\Format\Timestamps;
+use Hyphaeworks\Demonolog\LoggedException\ApplicationFrames;
+
+$timestamps = new Timestamps(new DateTimeZone('Europe/Vienna'));
+$frames = new ApplicationFrames(['vendor/', 'lib/']);
+$demonolog = new Demonolog(new LineFormat($timestamps, $frames), new JsonFormat($timestamps, $frames));
+```
+
 ## Another format
 
 A format is a class with three methods: `detect()` checks a sample of the file,

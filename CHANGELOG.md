@@ -2,6 +2,32 @@
 
 Until 1.0, a minor version may break the API. Each break is listed here.
 
+## Unreleased
+
+Changed:
+
+- `LineFormat` takes `Timestamps` and `ApplicationFrames`, like `JsonFormat`.
+  It no longer takes the internal `ContextSplitter` and `ExceptionText`.
+- `EntryIndex` no longer takes a `Filter` in its constructor. Use `filter()`,
+  which replaces any filter the index had.
+- `LogFile::tail(0)` returns no entries instead of failing.
+- `EntryIndex::offsetAt()` throws an `OutOfRangeException` for a position
+  outside the index.
+
+Fixed:
+
+- A file that starts with a byte order mark is read.
+- JSON is detected in a file that starts in the middle of a record, and when
+  the first record is longer than the 64 KiB sample.
+- The index starts over when the file shrank, instead of keeping old entries.
+- The index adds lines appended without a header to the last entry, as
+  `entries()` does.
+- The index text filter searches the full bytes of a record.
+- The index includes the last record of a file without a final newline.
+- A line cut at the 1 MiB record cap comes with a `Truncated` warning.
+- Frames in a Windows `vendor\` directory are marked.
+- A JSON record with an unknown level number takes the level from its name.
+
 ## 0.1.0 (2026-11-10)
 
 First release.
