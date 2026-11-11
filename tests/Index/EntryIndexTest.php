@@ -157,6 +157,20 @@ final class EntryIndexTest extends TestCase
     }
 
     #[Test]
+    public function aStepReportsHowFarItGot(): void
+    {
+        $log = (new Demonolog())->fromString(self::LOG);
+        $index = $log->index();
+
+        $growth = $index->grow(maximumBytes: 120);
+
+        $offsets = array_map(static fn (Entry $entry): int => $entry->offset, iterator_to_array($log->entries(), false));
+        self::assertFalse($growth->atEnd);
+        self::assertSame($offsets[count($index)], $growth->indexedBytes);
+        self::assertSame(strlen(self::LOG), $growth->fileBytes);
+    }
+
+    #[Test]
     public function growsWithAFileThatIsStillBeingWritten(): void
     {
         $path = (string)tempnam(sys_get_temp_dir(), 'demonolog');

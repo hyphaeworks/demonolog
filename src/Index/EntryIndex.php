@@ -123,10 +123,10 @@ final class EntryIndex implements Countable
                     $this->lastRecordAt = $last->offset;
                 }
 
-                return $this->stopAt($records->getReturn(), new Growth(atEnd: true, restarted: $restarted));
+                return $this->stopAt($records->getReturn(), $size, atEnd: true, restarted: $restarted);
             }
             if ($last !== null && $last->offset > $this->resumeAt) {
-                return $this->stopAt($last->offset, new Growth(atEnd: false, restarted: $restarted));
+                return $this->stopAt($last->offset, $size, atEnd: false, restarted: $restarted);
             }
         }
     }
@@ -195,12 +195,12 @@ final class EntryIndex implements Countable
             && ($this->filter->text === '' || stripos($this->source->read($offset, $length), $this->filter->text) !== false);
     }
 
-    private function stopAt(int $offset, Growth $growth): Growth
+    private function stopAt(int $offset, int $size, bool $atEnd, bool $restarted): Growth
     {
         $this->resumeAt = $offset;
         $this->fingerprint = $this->fingerprintAt($offset);
 
-        return $growth;
+        return new Growth(atEnd: $atEnd, restarted: $restarted, indexedBytes: $offset, fileBytes: $size);
     }
 
     /**
