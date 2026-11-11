@@ -13,6 +13,7 @@ use Hyphaeworks\Demonolog\Format\ReadsHeaders;
 use Hyphaeworks\Demonolog\Index\EntryIndex;
 use Hyphaeworks\Demonolog\Index\Filter;
 use Hyphaeworks\Demonolog\Reading\RawRecord;
+use OutOfRangeException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -164,6 +165,17 @@ final class EntryIndexTest extends TestCase
         self::assertCount(3, $index);
         self::assertSame(42, $index->offsetAt(1));
         self::assertCount(1, $filtered);
+    }
+
+    #[Test]
+    public function aPositionOutsideTheIndexHasNoOffset(): void
+    {
+        $index = $this->index(self::LOG);
+
+        $this->expectException(OutOfRangeException::class);
+        $this->expectExceptionMessage('Position 4 is outside the index of 4 entries');
+
+        $index->offsetAt(4);
     }
 
     #[Test]

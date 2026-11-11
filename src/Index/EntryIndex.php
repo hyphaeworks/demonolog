@@ -10,6 +10,7 @@ use Hyphaeworks\Demonolog\Format\ReadsHeaders;
 use Hyphaeworks\Demonolog\Reading\ByteSource;
 use Hyphaeworks\Demonolog\Reading\RawRecord;
 use Hyphaeworks\Demonolog\Reading\RecordFramer;
+use OutOfRangeException;
 
 final class EntryIndex implements Countable
 {
@@ -55,6 +56,10 @@ final class EntryIndex implements Countable
 
     public function offsetAt(int $position): int
     {
+        if ($position < 0 || $position >= $this->count()) {
+            throw new OutOfRangeException(sprintf('Position %d is outside the index of %d entries', $position, $this->count()));
+        }
+
         return $this->unpacked($this->matching ?? $this->all, $position * self::ENTRY_BYTES)['offset'];
     }
 
