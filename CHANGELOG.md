@@ -31,6 +31,8 @@ Fixed:
   instead of keeping old entries.
 - The index adds lines appended without a header to the last entry, as
   `entries()` does.
+- A channel filter treats channels beyond the 65,535th the same before and
+  after the index grows: they never match.
 - The index text filter searches the full bytes of a record.
 - The index includes the last record of a file without a final newline.
 - A line cut at the 1 MiB record cap comes with a `Truncated` warning.

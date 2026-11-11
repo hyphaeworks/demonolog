@@ -162,6 +162,27 @@ final class EntryIndexTest extends TestCase
     }
 
     #[Test]
+    public function aChannelBeyondTheIdRangeAlsoNeverMatchesWhenTheIndexGrows(): void
+    {
+        $path = (string)tempnam(sys_get_temp_dir(), 'demonolog');
+        $log = '';
+        for ($channel = 0; $channel <= 65535; ++$channel) {
+            $log .= sprintf("[2026-11-10 10:00:00] c%d.INFO: m [] []\n", $channel);
+        }
+        file_put_contents($path, $log);
+        $index = (new Demonolog())->open($path)->index();
+        $index->grow();
+        $filtered = $index->filter(new Filter(channels: ['c65535']));
+        $countBeforeGrowing = count($filtered);
+
+        file_put_contents($path, "[2026-11-10 10:00:01] c65535.INFO: again [] []\n", FILE_APPEND);
+        $filtered->grow();
+        unlink($path);
+
+        self::assertSame([0, 0], [$countBeforeGrowing, count($filtered)]);
+    }
+
+    #[Test]
     public function growsInStepsWithoutCuttingARecord(): void
     {
         $index = (new Demonolog())->fromString(self::LOG)->index();

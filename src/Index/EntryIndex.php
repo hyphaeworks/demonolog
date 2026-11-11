@@ -189,9 +189,10 @@ final class EntryIndex implements Countable
         $header = $this->format instanceof ReadsHeaders ? $this->format->header($record) : $this->format->parse($record);
         $level = $header->level->value ?? 0;
         $length = min($end - $record->offset, self::MAXIMUM_LENGTH);
-        $entry = pack(self::LAYOUT, $record->offset, $length, $level, $this->channelId($header->channel));
+        $channelId = $this->channelId($header->channel);
+        $entry = pack(self::LAYOUT, $record->offset, $length, $level, $channelId);
         $this->all .= $entry;
-        if ($this->matching !== null && $this->matches($record->offset, $length, $level, $header->channel)) {
+        if ($this->matching !== null && $this->matches($record->offset, $length, $level, $channelId === self::NO_CHANNEL_ID ? null : $header->channel)) {
             $this->matching .= $entry;
         }
     }
