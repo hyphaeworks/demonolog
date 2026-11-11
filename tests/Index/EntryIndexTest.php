@@ -168,6 +168,26 @@ final class EntryIndexTest extends TestCase
     }
 
     #[Test]
+    public function aLineAppendedWithoutAHeaderBelongsToTheLastEntry(): void
+    {
+        $path = (string)tempnam(sys_get_temp_dir(), 'demonolog');
+        file_put_contents($path, "[2026-11-10 10:00:00] app.INFO: one [] []\n[2026-11-10 10:00:01] app.INFO: two [] []\n");
+        $log = (new Demonolog())->open($path);
+        $index = $log->index();
+        $index->grow();
+        $needles = $index->filter(new Filter(text: 'needle'));
+
+        file_put_contents($path, "needle\n", FILE_APPEND);
+        $index->grow();
+        $needles->grow();
+        $entries = iterator_to_array($log->entries(), false);
+        unlink($path);
+
+        self::assertSame(array_map(static fn (Entry $entry): int => $entry->offset, $entries), array_map($index->offsetAt(...), range(0, count($index) - 1)));
+        self::assertSame([42], array_map($needles->offsetAt(...), range(0, count($needles) - 1)));
+    }
+
+    #[Test]
     public function aPositionOutsideTheIndexHasNoOffset(): void
     {
         $index = $this->index(self::LOG);

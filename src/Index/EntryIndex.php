@@ -28,7 +28,7 @@ final class EntryIndex implements Countable
     // The entries that pass the filter, or null when the index is not filtered and they are all of them.
     private ?string $matching = null;
     private int $resumeAt = 0;
-    private ?int $unterminatedAt = null;
+    private ?int $lastRecordAt = null;
     private Filter $filter;
 
     /**
@@ -66,7 +66,7 @@ final class EntryIndex implements Countable
     /**
      * Reads up to the given number of bytes and returns whether it reached the end of the file.
      * The last record read may go on after the limit, so it is read again on the next call.
-     * So is a last record without a newline, which may still be being written.
+     * So is the last record of the file, which may still be being written or get lines without a header appended.
      */
     public function grow(int $maximumBytes = PHP_INT_MAX): bool
     {
@@ -75,15 +75,15 @@ final class EntryIndex implements Countable
             $this->all = '';
             $this->matching = $this->matching === null ? null : '';
             $this->resumeAt = 0;
-            $this->unterminatedAt = null;
+            $this->lastRecordAt = null;
         }
-        if ($this->unterminatedAt !== null) {
+        if ($this->lastRecordAt !== null) {
             $this->all = substr($this->all, 0, -self::ENTRY_BYTES);
-            if ($this->matching !== null && $this->count() > 0 && $this->offsetAt($this->count() - 1) === $this->unterminatedAt) {
+            if ($this->matching !== null && $this->count() > 0 && $this->offsetAt($this->count() - 1) === $this->lastRecordAt) {
                 $this->matching = substr($this->matching, 0, -self::ENTRY_BYTES);
             }
-            $this->resumeAt = $this->unterminatedAt;
-            $this->unterminatedAt = null;
+            $this->resumeAt = $this->lastRecordAt;
+            $this->lastRecordAt = null;
         }
         for ($window = max(1, $maximumBytes);; $window *= 2) {
             $atEnd = $window >= $size - $this->resumeAt;
@@ -101,9 +101,7 @@ final class EntryIndex implements Countable
             if ($atEnd) {
                 if ($last !== null) {
                     $this->add($last, $records->getReturn());
-                    if ($this->source->read($size - 1, 1) !== "\n") {
-                        $this->unterminatedAt = $last->offset;
-                    }
+                    $this->lastRecordAt = $last->offset;
                 }
                 $this->resumeAt = $records->getReturn();
 
