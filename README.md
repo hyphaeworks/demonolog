@@ -104,6 +104,9 @@ for ($row = 0; $row < count($errors); ++$row) {
 }
 ```
 
+`channels()` lists the channels of the file in alphabetical order, for a filter
+menu. A filtered index lists them all, not only the ones it keeps.
+
 `grow(maximumBytes: 1_000_000)` reads in steps and returns a `Growth`. Call it
 until `atEnd` is true, and use `indexedBytes` and `fileBytes` for a progress
 bar:

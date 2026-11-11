@@ -8,6 +8,7 @@ Added:
 
 - `EntryIndex::entryAt()` reads the entry at a position from the file the
   index reads.
+- `EntryIndex::channels()` lists the channels of the file.
 
 Changed:
 
