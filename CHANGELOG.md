@@ -4,8 +4,15 @@ Until 1.0, a minor version may break the API. Each break is listed here.
 
 ## Unreleased
 
+Added:
+
+- `EntryIndex::entryAt()` reads the entry at a position from the file the
+  index reads.
+
 Changed:
 
+- `EntryIndex::grow()` returns a `Growth` with `atEnd` and `restarted`
+  instead of a bool.
 - `LineFormat` takes `Timestamps` and `ApplicationFrames`, like `JsonFormat`.
   It no longer takes the internal `ContextSplitter` and `ExceptionText`.
 - `EntryIndex` no longer takes a `Filter` in its constructor. Use `filter()`,
@@ -19,7 +26,8 @@ Fixed:
 - A file that starts with a byte order mark is read.
 - JSON is detected in a file that starts in the middle of a record, and when
   the first record is longer than the 64 KiB sample.
-- The index starts over when the file shrank, instead of keeping old entries.
+- The index starts over when the file was rotated, truncated or rewritten,
+  instead of keeping old entries.
 - The index adds lines appended without a header to the last entry, as
   `entries()` does.
 - The index text filter searches the full bytes of a record.

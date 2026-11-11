@@ -84,9 +84,9 @@ while (true) {
 `poll()` never blocks. A record that is still being written waits for the next
 poll.
 
-The follower switches to a rotated file on its own, but the `LogFile` keeps
-reading the old one. After `restarted`, open the file again before you use
-`entryAt()`, `tail()` or `index()`.
+The follower and the index switch to a rotated file on their own, but the
+`LogFile` keeps reading the old one. After a rotation, open the file again
+before you use its `entries()`, `entryAt()` or `tail()`.
 
 ## Index and filter
 
@@ -100,12 +100,18 @@ $index->grow();
 $errors = $index->filter(new Filter(minimumLevel: Level::Error, channels: ['app'], text: 'payment'));
 
 for ($row = 0; $row < count($errors); ++$row) {
-    echo $log->entryAt($errors->offsetAt($row))?->message, "\n";
+    echo $errors->entryAt($row)?->message, "\n";
 }
 ```
 
-`grow(maximumBytes: 1_000_000)` reads in steps, and a later `grow()` adds the
-entries written since. A filtered index keeps its filter when it grows.
+`grow(maximumBytes: 1_000_000)` reads in steps and returns a `Growth`. Call it
+until `atEnd` is true. A later `grow()` adds the entries written since. A
+filtered index keeps its filter when it grows.
+
+When the file was rotated, truncated or rewritten, `grow()` reads it again from
+the start and reports `restarted`, so a viewer knows its rows are gone.
+`entryAt()` reads from the same file as the index, so a row always matches its
+entry.
 
 ## Warnings
 
