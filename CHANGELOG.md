@@ -17,6 +17,10 @@ Changed:
   bar. It cannot report more bytes than the file has.
 - `Entry::$channel` and `Header::$channel` are null when a record has no
   channel, instead of an empty string. An empty channel name is rejected.
+- `Location::$line` is null when the line is not known, instead of 0. A
+  location needs a file, so `Location::parse()` returns null for empty text,
+  and `LoggedException::$location` is null for an exception without a file.
+  `Location::fromLog()` reads PHP's line 0 as no line.
 - `LineFormat` takes `Timestamps` and `ApplicationFrames`, like `JsonFormat`.
   It no longer takes the internal `ContextSplitter` and `ExceptionText`.
 - `EntryIndex` no longer takes a `Filter` in its constructor. Use `filter()`,

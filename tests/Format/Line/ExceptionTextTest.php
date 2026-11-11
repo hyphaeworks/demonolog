@@ -128,16 +128,29 @@ final class ExceptionTextTest extends TestCase
 
         self::assertNotNull($exception);
         self::assertSame('Outer, with a comma', $exception->message);
-        self::assertSame(14, $exception->location->line);
+        self::assertSame(14, $exception->location?->line);
         $middle = $exception->previous;
         self::assertNotNull($middle);
         self::assertSame('LogicException', $middle->type);
         self::assertSame("Middle:\nline", $middle->message);
-        self::assertSame('/app/src/B.php', $middle->location->file);
+        self::assertSame('/app/src/B.php', $middle->location?->file);
         $inner = $middle->previous;
         self::assertNotNull($inner);
         self::assertSame('HY000', $inner->code);
-        self::assertSame(3, $inner->location->line);
+        self::assertSame(3, $inner->location?->line);
+    }
+
+    #[Test]
+    public function readsLineZeroAsNoLine(): void
+    {
+        $exception = (new ExceptionText())->parse(
+            "[object] (RuntimeException(code: 0): Failed at /app/src/A.php:0)\n[stacktrace]\n#0 /app/src/B.php(0): run()\n#1 {main}",
+        );
+
+        self::assertNotNull($exception);
+        self::assertSame('/app/src/A.php', $exception->location?->file);
+        self::assertNull($exception->location->line);
+        self::assertNull($exception->frames()[0]->location?->line);
     }
 
     #[Test]

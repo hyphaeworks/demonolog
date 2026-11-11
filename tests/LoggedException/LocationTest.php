@@ -21,14 +21,38 @@ final class LocationTest extends TestCase
     #[Test]
     public function keepsTextWithoutALineAsTheFile(): void
     {
-        self::assertEquals(new Location('Unknown', 0), Location::parse('Unknown'));
+        self::assertEquals(new Location('Unknown', null), Location::parse('Unknown'));
     }
 
     #[Test]
-    public function rejectsANegativeLine(): void
+    public function readsLineZeroOfAnInternalFunctionAsNoLine(): void
+    {
+        self::assertEquals(new Location('internal[{closure}]', null), Location::fromLog('internal[{closure}]', 0));
+        self::assertEquals(new Location('internal[{closure}]', null), Location::parse('internal[{closure}]:0'));
+    }
+
+    #[Test]
+    public function readsAnEmptyFileAsNoLocation(): void
+    {
+        self::assertNull(Location::fromLog('', 3));
+        self::assertNull(Location::parse(''));
+    }
+
+    #[Test]
+    public function rejectsAnEmptyFile(): void
     {
         $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('A location has a file');
 
-        new Location('/app/src/Checkout.php', -1);
+        new Location('', 3);
+    }
+
+    #[Test]
+    public function rejectsALineBelowOne(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Line 0 of /app/src/Checkout.php is not a line');
+
+        new Location('/app/src/Checkout.php', 0);
     }
 }

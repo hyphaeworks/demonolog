@@ -32,8 +32,11 @@ final class JsonStacktrace implements Stacktrace
         }
 
         $locations = [];
-        foreach ($this->locations as $location) {
-            $locations[] = Location::parse($location);
+        foreach ($this->locations as $text) {
+            $location = Location::parse($text);
+            if ($location !== null) {
+                $locations[] = $location;
+            }
         }
         $inApp = $this->applicationFrames->mark(array_column($locations, 'file'));
 

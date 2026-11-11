@@ -72,7 +72,7 @@ final readonly class ExceptionText
                 type: $parts['type'],
                 message: $parts['message'],
                 code: preg_match('/^-?\d+$/', $parts['code']) === 1 ? (int)$parts['code'] : $parts['code'],
-                location: new Location($parts['file'], (int)$parts['line']),
+                location: Location::fromLog($parts['file'], (int)$parts['line']),
                 stacktrace: $index === 0 ? $stacktrace : null,
                 previous: $previous,
                 truncated: $truncated && $index === count($exceptions) - 1,

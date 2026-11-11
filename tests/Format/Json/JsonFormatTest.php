@@ -36,6 +36,15 @@ final class JsonFormatTest extends TestCase
     }
 
     #[Test]
+    public function anExceptionWithoutAFileHasNoLocation(): void
+    {
+        $entry = (new JsonFormat())->parse(new RawRecord(0, '{"message":"Failed","context":{"exception":{"class":"RuntimeException","message":"x","code":0,"trace":["","/app/src/A.php:3"]}},"level":400,"level_name":"ERROR","channel":"app","datetime":"2026-11-09T10:15:30+00:00","extra":{}}'));
+
+        self::assertNull($entry->exception?->location);
+        self::assertEquals([Frame::at(0, new Location('/app/src/A.php', 3), true)], $entry->exception?->frames());
+    }
+
+    #[Test]
     public function anEmptyChannelIsNoChannel(): void
     {
         $entry = (new JsonFormat())->parse(new RawRecord(0, '{"message":"Hello","context":{},"level":200,"level_name":"INFO","channel":"","datetime":"2026-11-09T10:15:30+00:00","extra":{}}'));

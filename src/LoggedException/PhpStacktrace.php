@@ -45,8 +45,8 @@ final class PhpStacktrace implements Stacktrace
         $location = null;
         if ($frame['file'] !== null) {
             $location = str_contains($frame['file'], ') : ') && preg_match(self::EVALUATED_CODE, $frame['file'], $evaluated) === 1
-                ? new Location($evaluated['file'], (int)$evaluated['line'])
-                : new Location($frame['file'], (int)$frame['line']);
+                ? Location::fromLog($evaluated['file'], (int)$evaluated['line'])
+                : Location::fromLog($frame['file'], (int)$frame['line']);
         }
 
         return Frame::call(

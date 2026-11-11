@@ -77,7 +77,7 @@ final class LineFormatTest extends TestCase
         self::assertSame(5, $entry->context['userId']);
         self::assertNotNull($entry->exception);
         self::assertSame('DivisionByZeroError', $entry->exception->type);
-        self::assertSame('/var/www/app/Http/Controllers/HomeController.php', $entry->exception->location->file);
+        self::assertSame('/var/www/app/Http/Controllers/HomeController.php', $entry->exception->location?->file);
         self::assertSame('App\Http\Controllers\HomeController', $entry->exception->frames()[0]->class);
         self::assertFalse($entry->exception->frames()[0]->inApp);
         self::assertTrue($entry->exception->frames()[1]->inApp);

@@ -12,7 +12,7 @@ final readonly class LoggedException
         public string $type,
         public string $message,
         public int|string $code,
-        public Location $location,
+        public ?Location $location,
         public ?Stacktrace $stacktrace = null,
         public ?self $previous = null,
         public bool $truncated = false,
