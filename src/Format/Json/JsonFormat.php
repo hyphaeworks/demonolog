@@ -26,16 +26,18 @@ final readonly class JsonFormat implements Format
 
     /**
      * A file may start in the middle of a record, after a copy-truncate rotation, so any line of the sample counts.
+     * The last line may be cut by the end of the sample. Monolog writes the message first, so its start is enough.
      */
     public function detect(string $sample): bool
     {
-        foreach (explode("\n", $sample) as $line) {
+        $lines = explode("\n", $sample);
+        foreach ($lines as $line) {
             if ($this->isRecord(trim($line))) {
                 return true;
             }
         }
 
-        return false;
+        return str_starts_with(trim($lines[count($lines) - 1]), '{"message":');
     }
 
     public function startsRecord(string $line): bool

@@ -70,6 +70,18 @@ final class DemonologTest extends TestCase
     }
 
     #[Test]
+    public function detectsJsonRecordsWhenTheFirstRecordIsLongerThanTheSample(): void
+    {
+        $long = str_repeat('x', 70000);
+        $log = '{"message":"' . $long . '","context":{},"level":200,"level_name":"INFO","channel":"app","datetime":"2026-11-09T10:15:30+00:00","extra":{}}' . "\n"
+            . '{"message":"Failed","context":{},"level":400,"level_name":"ERROR","channel":"app","datetime":"2026-11-09T10:15:31+00:00","extra":{}}' . "\n";
+
+        $entries = iterator_to_array((new Demonolog())->fromString($log)->entries(), false);
+
+        self::assertSame([$long, 'Failed'], array_map(static fn (Entry $entry): string => $entry->message, $entries));
+    }
+
+    #[Test]
     public function detectsAFormatAddedByAnotherPackageFirst(): void
     {
         $format = new class implements Format {
