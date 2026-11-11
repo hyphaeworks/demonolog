@@ -30,7 +30,9 @@ final readonly class ApplicationFrames
 
     private function isVendor(string $file): bool
     {
+        $file = str_replace('\\', '/', $file);
         foreach ($this->vendorPaths as $vendorPath) {
+            $vendorPath = str_replace('\\', '/', $vendorPath);
             if (str_starts_with($file, $vendorPath) || str_contains($file, '/' . $vendorPath)) {
                 return true;
             }

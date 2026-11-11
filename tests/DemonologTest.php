@@ -8,6 +8,7 @@ use Hyphaeworks\Demonolog\Demonolog;
 use Hyphaeworks\Demonolog\Entry\Entry;
 use Hyphaeworks\Demonolog\Entry\Level;
 use Hyphaeworks\Demonolog\Format\Format;
+use Hyphaeworks\Demonolog\LoggedException\Frame;
 use Hyphaeworks\Demonolog\Reading\RawRecord;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -79,6 +80,21 @@ final class DemonologTest extends TestCase
         $entries = iterator_to_array((new Demonolog())->fromString($log)->entries(), false);
 
         self::assertSame([$long, 'Failed'], array_map(static fn (Entry $entry): string => $entry->message, $entries));
+    }
+
+    #[Test]
+    public function marksFramesInAWindowsVendorDirectory(): void
+    {
+        $log = '{"message":"Failed","context":{"exception":{"class":"RuntimeException","message":"Failed","code":0,"file":"C:\\\\app\\\\src\\\\A.php:3",'
+            . '"trace":["C:\\\\app\\\\vendor\\\\symfony\\\\K.php:12","C:\\\\app\\\\src\\\\A.php:3"]}},'
+            . '"level":400,"level_name":"ERROR","channel":"app","datetime":"2026-11-09T10:15:31+00:00","extra":{}}' . "\n";
+
+        $entry = (new Demonolog())->fromString($log)->entryAt(0);
+
+        self::assertSame(
+            ['C:\app\vendor\symfony\K.php' => false, 'C:\app\src\A.php' => true],
+            array_column(array_map(static fn (Frame $frame): array => [$frame->location?->file, $frame->inApp], $entry?->exception?->frames() ?? []), 1, 0),
+        );
     }
 
     #[Test]
