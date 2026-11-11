@@ -70,7 +70,7 @@ final readonly class JsonFormat implements Format
             raw: $record->text,
             timestamp: $timestamp,
             channel: is_string($fields['channel'] ?? null) ? $fields['channel'] : '',
-            level: is_int($fields['level'] ?? null) ? Level::tryFrom($fields['level']) : Level::fromName($levelName),
+            level: (is_int($fields['level'] ?? null) ? Level::tryFrom($fields['level']) : null) ?? Level::fromName($levelName),
             levelName: $levelName,
             message: is_string($fields['message'] ?? null) ? $fields['message'] : '',
             context: $context,

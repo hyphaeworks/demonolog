@@ -83,6 +83,14 @@ final class DemonologTest extends TestCase
     }
 
     #[Test]
+    public function takesTheJsonLevelFromItsNameWhenTheNumberIsUnknown(): void
+    {
+        $log = '{"message":"Started","context":{},"level":350,"level_name":"INFO","channel":"app","datetime":"2026-11-09T10:15:30+00:00","extra":{}}' . "\n";
+
+        self::assertSame(Level::Info, (new Demonolog())->fromString($log)->entryAt(0)?->level);
+    }
+
+    #[Test]
     public function marksFramesInAWindowsVendorDirectory(): void
     {
         $log = '{"message":"Failed","context":{"exception":{"class":"RuntimeException","message":"Failed","code":0,"file":"C:\\\\app\\\\src\\\\A.php:3",'
