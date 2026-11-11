@@ -25,6 +25,7 @@ final class EntryIndex implements Countable
     private const OVERFLOW_CHANNEL = 0xFFFF;
     // A record holds at most 1 MiB of text plus one carriage return per line. Bytes skipped from a cut line are not searched.
     private const MAXIMUM_LENGTH = 2 * 1048576;
+    private const FINGERPRINT_BYTES = 64;
 
     private readonly RecordFramer $framer;
     private readonly RecordParser $parser;
@@ -32,6 +33,8 @@ final class EntryIndex implements Countable
     // The entries that pass the filter, or null when the index is not filtered and they are all of them.
     private ?string $matching = null;
     private int $resumeAt = 0;
+    // The bytes before resumeAt. If they changed, the file was rewritten.
+    private string $fingerprint = '';
     private ?int $lastRecordAt = null;
     private Filter $filter;
 
@@ -85,7 +88,7 @@ final class EntryIndex implements Countable
      */
     public function grow(int $maximumBytes = PHP_INT_MAX): Growth
     {
-        $restarted = $this->reopenedReplacedFile() || $this->source->size() < $this->resumeAt;
+        $restarted = $this->reopenedReplacedFile() || $this->fingerprintAt($this->resumeAt) !== $this->fingerprint;
         if ($restarted) {
             $this->all = '';
             $this->matching = $this->matching === null ? null : '';
@@ -119,14 +122,11 @@ final class EntryIndex implements Countable
                     $this->add($last, $records->getReturn());
                     $this->lastRecordAt = $last->offset;
                 }
-                $this->resumeAt = $records->getReturn();
 
-                return new Growth(atEnd: true, restarted: $restarted);
+                return $this->stopAt($records->getReturn(), new Growth(atEnd: true, restarted: $restarted));
             }
             if ($last !== null && $last->offset > $this->resumeAt) {
-                $this->resumeAt = $last->offset;
-
-                return new Growth(atEnd: false, restarted: $restarted);
+                return $this->stopAt($last->offset, new Growth(atEnd: false, restarted: $restarted));
             }
         }
     }
@@ -165,6 +165,13 @@ final class EntryIndex implements Countable
         return true;
     }
 
+    private function fingerprintAt(int $offset): string
+    {
+        $start = max(0, $offset - self::FINGERPRINT_BYTES);
+
+        return $offset === 0 ? '' : $this->source->read($start, $offset - $start);
+    }
+
     private function add(RawRecord $record, int $end): void
     {
         $header = $this->format instanceof ReadsHeaders ? $this->format->header($record) : $this->format->parse($record);
@@ -186,6 +193,14 @@ final class EntryIndex implements Countable
         return $level >= ($this->filter->minimumLevel->value ?? 0)
             && ($this->wantedChannels === [] || ($channel !== null && isset($this->wantedChannels[$channel])))
             && ($this->filter->text === '' || stripos($this->source->read($offset, $length), $this->filter->text) !== false);
+    }
+
+    private function stopAt(int $offset, Growth $growth): Growth
+    {
+        $this->resumeAt = $offset;
+        $this->fingerprint = $this->fingerprintAt($offset);
+
+        return $growth;
     }
 
     /**

@@ -220,6 +220,23 @@ final class EntryIndexTest extends TestCase
     }
 
     #[Test]
+    public function startsOverWhenTheFileWasRewrittenPastItsOldEnd(): void
+    {
+        $path = (string)tempnam(sys_get_temp_dir(), 'demonolog');
+        file_put_contents($path, "[2026-11-10 10:00:00] app.INFO: one [] []\n");
+        $index = (new Demonolog())->open($path)->index();
+        $index->grow();
+
+        file_put_contents($path, "[2026-11-10 10:00:01] app.INFO: fresh [] []\n[2026-11-10 10:00:02] app.INFO: again [] []\n");
+        $growth = $index->grow();
+        $messages = array_map(static fn (int $position): string => $index->entryAt($position)->message ?? '', range(0, count($index) - 1));
+        unlink($path);
+
+        self::assertTrue($growth->restarted);
+        self::assertSame(['fresh', 'again'], $messages);
+    }
+
+    #[Test]
     public function aPositionOutsideTheIndexHasNoOffset(): void
     {
         $index = $this->index(self::LOG);
