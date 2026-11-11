@@ -45,6 +45,22 @@ final class JsonFormatTest extends TestCase
     }
 
     #[Test]
+    public function theLevelNameWinsOverAContradictingNumber(): void
+    {
+        $entry = (new JsonFormat())->parse(new RawRecord(0, '{"message":"Hello","context":{},"level":400,"level_name":"INFO","channel":"app","datetime":"2026-11-09T10:15:30+00:00","extra":{}}'));
+
+        self::assertSame(Level::Info, $entry->level);
+    }
+
+    #[Test]
+    public function takesTheLevelFromTheNumberWhenTheNameIsUnknown(): void
+    {
+        $entry = (new JsonFormat())->parse(new RawRecord(0, '{"message":"Hello","context":{},"level":400,"level_name":"FATAL","channel":"app","datetime":"2026-11-09T10:15:30+00:00","extra":{}}'));
+
+        self::assertSame([Level::Error, 'FATAL'], [$entry->level, $entry->levelName]);
+    }
+
+    #[Test]
     public function anEmptyChannelIsNoChannel(): void
     {
         $entry = (new JsonFormat())->parse(new RawRecord(0, '{"message":"Hello","context":{},"level":200,"level_name":"INFO","channel":"","datetime":"2026-11-09T10:15:30+00:00","extra":{}}'));

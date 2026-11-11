@@ -34,6 +34,10 @@ final readonly class Entry
         if ($channel === '') {
             throw new InvalidArgumentException('A channel has a name, or is null');
         }
+        $named = Level::fromName($levelName);
+        if ($named !== null && $named !== $level) {
+            throw new InvalidArgumentException(sprintf('Level %s contradicts the level name "%s"', $level->name ?? 'null', $levelName));
+        }
     }
 
     public static function unparsed(int $offset, string $raw, Warning $warning): self

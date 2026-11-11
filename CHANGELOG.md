@@ -21,6 +21,9 @@ Changed:
   location needs a file, so `Location::parse()` returns null for empty text,
   and `LoggedException::$location` is null for an exception without a file.
   `Location::fromLog()` reads PHP's line 0 as no line.
+- An `Entry` rejects a level that contradicts a known level name. A JSON record
+  takes its level from the name, and from the number only when the name is
+  unknown.
 - `LineFormat` takes `Timestamps` and `ApplicationFrames`, like `JsonFormat`.
   It no longer takes the internal `ContextSplitter` and `ExceptionText`.
 - `EntryIndex` no longer takes a `Filter` in its constructor. Use `filter()`,
