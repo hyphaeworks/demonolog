@@ -12,41 +12,18 @@ use Hyphaeworks\Demonolog\Format\RecordParser;
 use Hyphaeworks\Demonolog\Reading\ByteSource;
 use Hyphaeworks\Demonolog\Reading\RawRecord;
 use Hyphaeworks\Demonolog\Reading\RecordFramer;
-use OutOfRangeException;
 use RuntimeException;
 
 final class EntryIndex implements Countable
 {
-    // Offset, length, level and channel id. 16 bytes per entry (count() shifts by 4), so millions of entries fit.
-    private const LAYOUT = 'JNnn';
-    private const UNPACK = 'Joffset/Nlength/nlevel/nchannel';
-    private const ENTRY_BYTES = 16;
-    // Channel ids have 16 bits. Records without a channel and channels beyond that share this id, which no channel filter matches.
-    private const NO_CHANNEL_ID = 0xFFFF;
     // A record holds at most 1 MiB of text plus one carriage return per line. Bytes skipped from a cut line are not searched.
     private const MAXIMUM_LENGTH = 2 * 1048576;
     private const FINGERPRINT_BYTES = 64;
 
     private readonly RecordFramer $framer;
     private readonly RecordParser $parser;
-    private string $all = '';
-    // The entries that pass the filter, or null when the index is not filtered and they are all of them.
-    private ?string $matching = null;
-    private int $resumeAt = 0;
-    // The bytes before resumeAt. If they changed, the file was rewritten.
-    private string $fingerprint = '';
-    private ?int $lastRecordAt = null;
-    private Filter $filter;
-
-    /**
-     * @var array<string, int>
-     */
-    private array $channelIds = [];
-
-    /**
-     * @var array<string, true>
-     */
-    private array $wantedChannels = [];
+    private IndexedFile $file;
+    private ?FilteredRows $filtered = null;
 
     public function __construct(
         private ByteSource $source,
@@ -54,12 +31,17 @@ final class EntryIndex implements Countable
     ) {
         $this->framer = new RecordFramer($format->startsRecord(...));
         $this->parser = new RecordParser($format);
-        $this->filter = new Filter();
+        $this->file = new IndexedFile();
+    }
+
+    public function __clone()
+    {
+        $this->file = clone $this->file;
     }
 
     public function count(): int
     {
-        return strlen($this->matching ?? $this->all) >> 4;
+        return ($this->filtered ?? $this->file)->count();
     }
 
     /**
@@ -67,19 +49,12 @@ final class EntryIndex implements Countable
      */
     public function channels(): array
     {
-        $channels = array_map(strval(...), array_keys($this->channelIds));
-        sort($channels);
-
-        return $channels;
+        return $this->file->channels();
     }
 
     public function offsetAt(int $position): int
     {
-        if ($position < 0 || $position >= $this->count()) {
-            throw new OutOfRangeException(sprintf('Position %d is outside the index of %d entries', $position, $this->count()));
-        }
-
-        return $this->unpacked($this->matching ?? $this->all, $position * self::ENTRY_BYTES)['offset'];
+        return ($this->filtered ?? $this->file)->at($position)['offset'];
     }
 
     public function entryAt(int $position): ?Entry
@@ -99,27 +74,21 @@ final class EntryIndex implements Countable
      */
     public function grow(int $maximumBytes = PHP_INT_MAX): Growth
     {
-        $restarted = $this->reopenedReplacedFile() || $this->fingerprintAt($this->resumeAt) !== $this->fingerprint;
+        $restarted = $this->reopenedReplacedFile() || $this->fingerprintAt($this->file->resumeAt()) !== $this->file->fingerprint();
         if ($restarted) {
-            $this->all = '';
-            $this->matching = $this->matching === null ? null : '';
-            $this->resumeAt = 0;
-            $this->lastRecordAt = null;
-            $this->channelIds = [];
+            $this->file = new IndexedFile();
+            $this->filtered = $this->filtered?->emptied();
         }
-        if ($this->lastRecordAt !== null) {
-            $this->all = substr($this->all, 0, -self::ENTRY_BYTES);
-            if ($this->matching !== null && $this->count() > 0 && $this->offsetAt($this->count() - 1) === $this->lastRecordAt) {
-                $this->matching = substr($this->matching, 0, -self::ENTRY_BYTES);
-            }
-            $this->resumeAt = $this->lastRecordAt;
-            $this->lastRecordAt = null;
+        $reopenedAt = $this->file->reopenLastRecord();
+        if ($reopenedAt !== null) {
+            $this->filtered?->removeLastIfAt($reopenedAt);
         }
+        $resumeAt = $this->file->resumeAt();
         $size = $this->source->size();
         for ($window = max(1, $maximumBytes);; $window *= 2) {
-            $atEnd = $window >= $size - $this->resumeAt;
-            $until = $atEnd ? $size : $this->resumeAt + $window;
-            $records = $this->framer->records($this->source->chunks($this->resumeAt, toOffset: $until), $this->resumeAt, holdPartialTail: !$atEnd);
+            $atEnd = $window >= $size - $resumeAt;
+            $until = $atEnd ? $size : $resumeAt + $window;
+            $records = $this->framer->records($this->source->chunks($resumeAt, toOffset: $until), $resumeAt, holdPartialTail: !$atEnd);
 
             $last = null;
             foreach ($records as $record) {
@@ -132,13 +101,12 @@ final class EntryIndex implements Countable
             if ($atEnd) {
                 if ($last !== null) {
                     $this->add($last, $records->getReturn());
-                    $this->lastRecordAt = $last->offset;
                 }
 
-                return $this->stopAt($records->getReturn(), $size, atEnd: true, restarted: $restarted);
+                return $this->stopAt($records->getReturn(), $size, atEnd: true, restarted: $restarted, openRecordAt: $last?->offset);
             }
-            if ($last !== null && $last->offset > $this->resumeAt) {
-                return $this->stopAt($last->offset, $size, atEnd: false, restarted: $restarted);
+            if ($last !== null && $last->offset > $resumeAt) {
+                return $this->stopAt($last->offset, $size, atEnd: false, restarted: $restarted, openRecordAt: null);
             }
         }
     }
@@ -149,16 +117,12 @@ final class EntryIndex implements Countable
     public function filter(Filter $filter): self
     {
         $filtered = clone $this;
-        $filtered->filter = $filter;
-        $filtered->wantedChannels = array_fill_keys($filter->channels, true);
-        $filtered->matching = '';
-        $channelNames = array_flip($this->channelIds);
-        for ($at = 0, $end = strlen($this->all); $at < $end; $at += self::ENTRY_BYTES) {
-            $entry = $this->unpacked($this->all, $at);
-            if ($filtered->matches($entry['offset'], $entry['length'], $entry['level'], $channelNames[$entry['channel']] ?? null)) {
-                $filtered->matching .= substr($this->all, $at, self::ENTRY_BYTES);
-            }
+        $rows = new FilteredRows($filter);
+        for ($position = 0, $end = $this->file->count(); $position < $end; ++$position) {
+            $row = $this->file->at($position);
+            $rows->offer($row, $this->file->channelName($row['channel']), $this->source);
         }
+        $filtered->filtered = $rows;
 
         return $filtered;
     }
@@ -187,56 +151,14 @@ final class EntryIndex implements Countable
     private function add(RawRecord $record, int $end): void
     {
         $header = $this->format instanceof ReadsHeaders ? $this->format->header($record) : $this->format->parse($record);
-        $level = $header->level->value ?? 0;
-        $length = min($end - $record->offset, self::MAXIMUM_LENGTH);
-        $channelId = $this->channelId($header->channel);
-        $entry = pack(self::LAYOUT, $record->offset, $length, $level, $channelId);
-        $this->all .= $entry;
-        if ($this->matching !== null && $this->matches($record->offset, $length, $level, $channelId === self::NO_CHANNEL_ID ? null : $header->channel)) {
-            $this->matching .= $entry;
-        }
+        $row = $this->file->add($record->offset, min($end - $record->offset, self::MAXIMUM_LENGTH), $header->level->value ?? 0, $header->channel);
+        $this->filtered?->offer($row, $this->file->channelName($row['channel']), $this->source);
     }
 
-    private function channelId(string $channel): int
+    private function stopAt(int $offset, int $size, bool $atEnd, bool $restarted, ?int $openRecordAt): Growth
     {
-        if ($channel === '') {
-            return self::NO_CHANNEL_ID;
-        }
-        if (isset($this->channelIds[$channel])) {
-            return $this->channelIds[$channel];
-        }
-        if (count($this->channelIds) >= self::NO_CHANNEL_ID) {
-            return self::NO_CHANNEL_ID;
-        }
-
-        return $this->channelIds[$channel] = count($this->channelIds);
-    }
-
-    private function matches(int $offset, int $length, int $level, ?string $channel): bool
-    {
-        return $level >= ($this->filter->minimumLevel->value ?? 0)
-            && ($this->wantedChannels === [] || ($channel !== null && isset($this->wantedChannels[$channel])))
-            && ($this->filter->text === '' || stripos($this->source->read($offset, $length), $this->filter->text) !== false);
-    }
-
-    private function stopAt(int $offset, int $size, bool $atEnd, bool $restarted): Growth
-    {
-        $this->resumeAt = $offset;
-        $this->fingerprint = $this->fingerprintAt($offset);
+        $this->file->stopAt($offset, $this->fingerprintAt($offset), $openRecordAt);
 
         return new Growth(atEnd: $atEnd, restarted: $restarted, indexedBytes: $offset, fileBytes: $size);
-    }
-
-    /**
-     * @return array{offset: int, length: int, level: int, channel: int}
-     */
-    private function unpacked(string $entries, int $at): array
-    {
-        /**
-         * @var array{offset: int, length: int, level: int, channel: int} $entry
-         */
-        $entry = unpack(self::UNPACK, $entries, $at);
-
-        return $entry;
     }
 }

@@ -110,6 +110,23 @@ final class EntryIndexTest extends TestCase
     }
 
     #[Test]
+    public function anIndexAndItsFilteredCopyGrowOnTheirOwn(): void
+    {
+        $path = (string)tempnam(sys_get_temp_dir(), 'demonolog');
+        file_put_contents($path, "[2026-11-10 10:00:00] app.ERROR: one [] []\n");
+        $index = (new Demonolog())->open($path)->index();
+        $index->grow();
+        $errors = $index->filter(new Filter(minimumLevel: Level::Error));
+
+        file_put_contents($path, "[2026-11-10 10:00:01] app.ERROR: two [] []\n[2026-11-10 10:00:02] app.ERROR: three [] []\n", FILE_APPEND);
+        $index->grow();
+        $errors->grow();
+        unlink($path);
+
+        self::assertSame([3, 3], [count($index), count($errors)]);
+    }
+
+    #[Test]
     public function aNewFilterReplacesThePreviousOne(): void
     {
         $path = (string)tempnam(sys_get_temp_dir(), 'demonolog');
