@@ -41,6 +41,17 @@ final class EntryIndexTest extends TestCase
     }
 
     #[Test]
+    public function readsTheEntryAtAPosition(): void
+    {
+        $errors = $this->index(self::LOG)->filter(new Filter(minimumLevel: Level::Error));
+
+        $entry = $errors->entryAt(0);
+
+        self::assertSame('payment failed', $entry?->message);
+        self::assertSame('E', $entry->exception?->type);
+    }
+
+    #[Test]
     public function keepsEntriesAtOrAboveAMinimumLevel(): void
     {
         $filtered = $this->index(self::LOG)->filter(new Filter(minimumLevel: Level::Warning));

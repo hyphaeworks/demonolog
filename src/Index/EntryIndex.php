@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Hyphaeworks\Demonolog\Index;
 
 use Countable;
+use Hyphaeworks\Demonolog\Entry\Entry;
 use Hyphaeworks\Demonolog\Format\Format;
 use Hyphaeworks\Demonolog\Format\ReadsHeaders;
+use Hyphaeworks\Demonolog\Format\RecordParser;
 use Hyphaeworks\Demonolog\Reading\ByteSource;
 use Hyphaeworks\Demonolog\Reading\RawRecord;
 use Hyphaeworks\Demonolog\Reading\RecordFramer;
@@ -24,6 +26,7 @@ final class EntryIndex implements Countable
     private const MAXIMUM_LENGTH = 2 * 1048576;
 
     private readonly RecordFramer $framer;
+    private readonly RecordParser $parser;
     private string $all = '';
     // The entries that pass the filter, or null when the index is not filtered and they are all of them.
     private ?string $matching = null;
@@ -46,6 +49,7 @@ final class EntryIndex implements Countable
         private readonly Format $format,
     ) {
         $this->framer = new RecordFramer($format->startsRecord(...));
+        $this->parser = new RecordParser($format);
         $this->filter = new Filter();
     }
 
@@ -61,6 +65,16 @@ final class EntryIndex implements Countable
         }
 
         return $this->unpacked($this->matching ?? $this->all, $position * self::ENTRY_BYTES)['offset'];
+    }
+
+    public function entryAt(int $position): ?Entry
+    {
+        $offset = $this->offsetAt($position);
+        foreach ($this->framer->records($this->source->chunks($offset), $offset) as $record) {
+            return $this->parser->parse($record);
+        }
+
+        return null;
     }
 
     /**

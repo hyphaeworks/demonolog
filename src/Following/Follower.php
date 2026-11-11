@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace Hyphaeworks\Demonolog\Following;
 
 use Hyphaeworks\Demonolog\Entry\Entry;
-use Hyphaeworks\Demonolog\Entry\Warning;
-use Hyphaeworks\Demonolog\Entry\WarningCode;
 use Hyphaeworks\Demonolog\Format\Format;
+use Hyphaeworks\Demonolog\Format\RecordParser;
 use Hyphaeworks\Demonolog\Reading\ByteSource;
 use Hyphaeworks\Demonolog\Reading\RecordFramer;
 use RuntimeException;
@@ -18,14 +17,16 @@ final class Follower
     private const FINGERPRINT_BYTES = 64;
 
     private readonly RecordFramer $framer;
+    private readonly RecordParser $parser;
     private string $fingerprint;
 
     public function __construct(
         private ByteSource $source,
-        private readonly Format $format,
+        Format $format,
         private int $offset,
     ) {
         $this->framer = new RecordFramer($format->startsRecord(...));
+        $this->parser = new RecordParser($format);
         $this->fingerprint = $this->fingerprintAt($offset);
     }
 
@@ -59,8 +60,7 @@ final class Follower
         $records = $this->framer->records($this->source->chunks($this->offset), $this->offset, $holdPartialTail);
         $entries = [];
         foreach ($records as $record) {
-            $entry = $this->format->parse($record);
-            $entries[] = $record->truncated ? $entry->withWarning(new Warning(WarningCode::Truncated, 'A line was longer than 1 MiB, so its end is missing')) : $entry;
+            $entries[] = $this->parser->parse($record);
         }
         $this->offset = $records->getReturn();
         $this->fingerprint = $this->fingerprintAt($this->offset);
