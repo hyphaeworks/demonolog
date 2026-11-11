@@ -84,6 +84,10 @@ while (true) {
 `poll()` never blocks. A record that is still being written waits for the next
 poll.
 
+The follower switches to a rotated file on its own, but the `LogFile` keeps
+reading the old one. After `restarted`, open the file again before you use
+`entryAt()`, `tail()` or `index()`.
+
 ## Index and filter
 
 ```php
