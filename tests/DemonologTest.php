@@ -8,6 +8,8 @@ use Hyphaeworks\Demonolog\Demonolog;
 use Hyphaeworks\Demonolog\Entry\Entry;
 use Hyphaeworks\Demonolog\Entry\Level;
 use Hyphaeworks\Demonolog\Format\Format;
+use Hyphaeworks\Demonolog\Format\Line\LineFormat;
+use Hyphaeworks\Demonolog\LoggedException\ApplicationFrames;
 use Hyphaeworks\Demonolog\LoggedException\Frame;
 use Hyphaeworks\Demonolog\Reading\RawRecord;
 use PHPUnit\Framework\Attributes\Test;
@@ -103,6 +105,22 @@ final class DemonologTest extends TestCase
             ['C:\app\vendor\symfony\K.php' => false, 'C:\app\src\A.php' => true],
             array_column(array_map(static fn (Frame $frame): array => [$frame->location?->file, $frame->inApp], $entry?->exception?->frames() ?? []), 1, 0),
         );
+    }
+
+    #[Test]
+    public function marksFramesInTheVendorPathsGivenToTheLineFormat(): void
+    {
+        $log = "[2026-11-09 10:15:31] app.ERROR: Failed {\"exception\":\"[object] (RuntimeException(code: 0): Failed at /app/src/A.php:3)\n"
+            . "[stacktrace]\n"
+            . "#0 /app/lib/K.php(12): K->run()\n"
+            . "#1 /app/src/A.php(3): A->run()\n"
+            . "#2 {main}\n"
+            . "\"} []\n";
+        $format = new LineFormat(applicationFrames: new ApplicationFrames(['lib/']));
+
+        $entry = (new Demonolog())->fromString($log, $format)->entryAt(0);
+
+        self::assertSame([false, true, false], array_map(static fn (Frame $frame): bool => $frame->inApp, $entry?->exception?->frames() ?? []));
     }
 
     #[Test]

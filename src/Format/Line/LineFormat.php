@@ -12,6 +12,7 @@ use Hyphaeworks\Demonolog\Format\Format;
 use Hyphaeworks\Demonolog\Format\Header;
 use Hyphaeworks\Demonolog\Format\ReadsHeaders;
 use Hyphaeworks\Demonolog\Format\Timestamps;
+use Hyphaeworks\Demonolog\LoggedException\ApplicationFrames;
 use Hyphaeworks\Demonolog\Reading\RawRecord;
 
 final readonly class LineFormat implements Format, ReadsHeaders
@@ -19,11 +20,15 @@ final readonly class LineFormat implements Format, ReadsHeaders
     private const HEADER = '/^\[(?<datetime>[^\]]{8,64})\] (?<channel>[^\s:]+?)\.(?<level>[A-Za-z]{1,9}): (?<rest>.*)\z/s';
     private const RECORD_START = '/^\[[^\]]{8,64}\] (?<channel>[^\s:]+?)\.(?<level>[A-Za-z]{1,9}): /';
 
+    private ContextSplitter $contextSplitter;
+    private ExceptionText $exceptionText;
+
     public function __construct(
         private Timestamps $timestamps = new Timestamps(),
-        private ContextSplitter $contextSplitter = new ContextSplitter(),
-        private ExceptionText $exceptionText = new ExceptionText(),
+        ApplicationFrames $applicationFrames = new ApplicationFrames(),
     ) {
+        $this->contextSplitter = new ContextSplitter();
+        $this->exceptionText = new ExceptionText($applicationFrames);
     }
 
     public function detect(string $sample): bool
