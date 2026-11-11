@@ -65,6 +65,13 @@ final class EntryIndex implements Countable
      */
     public function grow(int $maximumBytes = PHP_INT_MAX): bool
     {
+        $size = $this->source->size();
+        if ($size < $this->resumeAt) {
+            $this->all = '';
+            $this->matching = $this->matching === null ? null : '';
+            $this->resumeAt = 0;
+            $this->unterminatedAt = null;
+        }
         if ($this->unterminatedAt !== null) {
             $this->all = substr($this->all, 0, -self::ENTRY_BYTES);
             if ($this->matching !== null && $this->count() > 0 && $this->offsetAt($this->count() - 1) === $this->unterminatedAt) {
@@ -73,7 +80,6 @@ final class EntryIndex implements Countable
             $this->resumeAt = $this->unterminatedAt;
             $this->unterminatedAt = null;
         }
-        $size = $this->source->size();
         for ($window = max(1, $maximumBytes);; $window *= 2) {
             $atEnd = $window >= $size - $this->resumeAt;
             $until = $atEnd ? $size : $this->resumeAt + $window;

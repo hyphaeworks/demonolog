@@ -167,6 +167,27 @@ final class EntryIndexTest extends TestCase
     }
 
     #[Test]
+    public function startsOverWhenTheFileShrank(): void
+    {
+        $path = (string)tempnam(sys_get_temp_dir(), 'demonolog');
+        file_put_contents($path, "[2026-11-10 10:00:00] app.INFO: one [] []\n[2026-11-10 10:00:01] app.ERROR: two [] []\n[2026-11-10 10:00:02] app.INFO: three [] []\n");
+        $log = (new Demonolog())->open($path);
+        $index = $log->index();
+        $index->grow();
+        $errors = $index->filter(new Filter(minimumLevel: Level::Error));
+
+        file_put_contents($path, "[2026-11-10 10:00:03] app.ERROR: fresh [] []\n");
+        $index->grow();
+        $errors->grow();
+        $messages = array_map(static fn (int $offset): string => $log->entryAt($offset)->message ?? '', [$index->offsetAt(0), $errors->offsetAt(0)]);
+        unlink($path);
+
+        self::assertCount(1, $index);
+        self::assertCount(1, $errors);
+        self::assertSame(['fresh', 'fresh'], $messages);
+    }
+
+    #[Test]
     public function readsOnlyTheHeaderWhenTheFormatOffersIt(): void
     {
         $format = new class implements Format, ReadsHeaders {
