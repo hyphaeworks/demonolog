@@ -20,4 +20,13 @@ final class EntryTest extends TestCase
 
         Entry::unparsed(-1, 'garbage', new Warning(WarningCode::Unparsed, 'Not a Monolog line record'));
     }
+
+    #[Test]
+    public function rejectsAnEmptyChannel(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('A channel has a name, or is null');
+
+        new Entry(0, 'text', null, '', null, '', 'text');
+    }
 }

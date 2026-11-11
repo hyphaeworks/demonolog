@@ -36,6 +36,14 @@ final class JsonFormatTest extends TestCase
     }
 
     #[Test]
+    public function anEmptyChannelIsNoChannel(): void
+    {
+        $entry = (new JsonFormat())->parse(new RawRecord(0, '{"message":"Hello","context":{},"level":200,"level_name":"INFO","channel":"","datetime":"2026-11-09T10:15:30+00:00","extra":{}}'));
+
+        self::assertNull($entry->channel);
+    }
+
+    #[Test]
     public function readsTheDatetimeObjectOfMonolog1(): void
     {
         $entry = (new JsonFormat())->parse(new RawRecord(0, '{"message":"Hello","context":{},"level":200,"level_name":"INFO","channel":"app","datetime":{"date":"2026-11-09 21:17:47.799318","timezone_type":3,"timezone":"Europe/Vienna"},"extra":[]}'));

@@ -105,7 +105,7 @@ final class LineFormatTest extends TestCase
         self::assertSame(7, $entry->offset);
         self::assertNull($entry->timestamp);
         self::assertNull($entry->level);
-        self::assertSame('', $entry->channel);
+        self::assertNull($entry->channel);
         self::assertSame('PHP Fatal error:  Allowed memory size exhausted', $entry->message);
         self::assertSame([WarningCode::Unparsed], self::warningCodes($entry));
     }

@@ -15,6 +15,8 @@ Changed:
 - `EntryIndex::grow()` returns a `Growth` instead of a bool. It has
   `atEnd()`, `restarted`, and `indexedBytes` and `fileBytes` for a progress
   bar. It cannot report more bytes than the file has.
+- `Entry::$channel` and `Header::$channel` are null when a record has no
+  channel, instead of an empty string. An empty channel name is rejected.
 - `LineFormat` takes `Timestamps` and `ApplicationFrames`, like `JsonFormat`.
   It no longer takes the internal `ContextSplitter` and `ExceptionText`.
 - `EntryIndex` no longer takes a `Filter` in its constructor. Use `filter()`,

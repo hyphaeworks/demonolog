@@ -69,7 +69,7 @@ final readonly class JsonFormat implements Format
             offset: $record->offset,
             raw: $record->text,
             timestamp: $timestamp,
-            channel: is_string($fields['channel'] ?? null) ? $fields['channel'] : '',
+            channel: is_string($fields['channel'] ?? null) && $fields['channel'] !== '' ? $fields['channel'] : null,
             level: (is_int($fields['level'] ?? null) ? Level::tryFrom($fields['level']) : null) ?? Level::fromName($levelName),
             levelName: $levelName,
             message: is_string($fields['message'] ?? null) ? $fields['message'] : '',

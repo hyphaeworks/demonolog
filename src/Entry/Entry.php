@@ -19,7 +19,7 @@ final readonly class Entry
         public int $offset,
         public string $raw,
         public ?DateTimeImmutable $timestamp,
-        public string $channel,
+        public ?string $channel,
         public ?Level $level,
         public string $levelName,
         public string $message,
@@ -31,6 +31,9 @@ final readonly class Entry
         if ($offset < 0) {
             throw new InvalidArgumentException(sprintf('Offset %d is negative', $offset));
         }
+        if ($channel === '') {
+            throw new InvalidArgumentException('A channel has a name, or is null');
+        }
     }
 
     public static function unparsed(int $offset, string $raw, Warning $warning): self
@@ -39,7 +42,7 @@ final readonly class Entry
             offset: $offset,
             raw: $raw,
             timestamp: null,
-            channel: '',
+            channel: null,
             level: null,
             levelName: '',
             message: $raw,

@@ -96,7 +96,7 @@ final class IndexedFile implements Countable
     /**
      * @return array{offset: int, length: int, level: int, channel: int}
      */
-    public function add(int $offset, int $length, int $level, string $channel): array
+    public function add(int $offset, int $length, int $level, ?string $channel): array
     {
         $row = ['offset' => $offset, 'length' => $length, 'level' => $level, 'channel' => $this->channelId($channel)];
         $this->rows->add($row);
@@ -111,9 +111,9 @@ final class IndexedFile implements Countable
         $this->openRecordAt = $openRecordAt;
     }
 
-    private function channelId(string $channel): int
+    private function channelId(?string $channel): int
     {
-        if ($channel === '') {
+        if ($channel === null) {
             return self::NO_CHANNEL_ID;
         }
         if (isset($this->channelIds[$channel])) {

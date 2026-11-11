@@ -148,7 +148,7 @@ final class DemonologTest extends TestCase
             false,
         );
 
-        self::assertSame(['added', 'added'], array_map(static fn (Entry $entry): string => $entry->channel, $entries));
+        self::assertSame(['added', 'added'], array_map(static fn (Entry $entry): ?string => $entry->channel, $entries));
     }
 
     #[Test]

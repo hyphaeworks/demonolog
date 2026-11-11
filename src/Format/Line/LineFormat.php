@@ -44,7 +44,7 @@ final readonly class LineFormat implements Format, ReadsHeaders
     public function header(RawRecord $record): Header
     {
         if (preg_match(self::RECORD_START, $record->text, $header) !== 1) {
-            return new Header(null, '');
+            return new Header(null, null);
         }
 
         return new Header(Level::fromName($header['level']), $header['channel']);

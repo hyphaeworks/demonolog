@@ -38,7 +38,7 @@ final class LogFileTest extends TestCase
 
         $entries = iterator_to_array((new Demonolog())->fromString($log)->entries(), false);
 
-        self::assertSame(['app', 'child', 'app'], array_map(static fn (Entry $entry): string => $entry->channel, $entries));
+        self::assertSame(['app', 'child', 'app'], array_map(static fn (Entry $entry): ?string => $entry->channel, $entries));
         self::assertNotSame([], $entries[1]->warnings);
         self::assertSame($log, implode('', array_map(static fn (Entry $entry): string => $entry->raw . "\n", $entries)));
     }
