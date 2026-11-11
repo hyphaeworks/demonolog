@@ -129,6 +129,26 @@ final class EntryIndexTest extends TestCase
     }
 
     #[Test]
+    public function listsTheChannelsOfItsFileInAlphabeticalOrder(): void
+    {
+        self::assertSame(['app', 'doctrine', 'security'], $this->index(self::LOG)->channels());
+    }
+
+    #[Test]
+    public function aFilteredIndexListsAllChannels(): void
+    {
+        $errors = $this->index(self::LOG)->filter(new Filter(channels: ['app']));
+
+        self::assertSame(['app', 'doctrine', 'security'], $errors->channels());
+    }
+
+    #[Test]
+    public function aRecordWithoutAChannelAddsNone(): void
+    {
+        self::assertSame(['app'], $this->index("not a record\n[2026-11-10 10:00:00] app.INFO: one [] []\n")->channels());
+    }
+
+    #[Test]
     public function channelsBeyondTheIdRangeNeverMatchAnotherChannel(): void
     {
         $log = '';
@@ -258,6 +278,23 @@ final class EntryIndexTest extends TestCase
         self::assertTrue($growth->restarted);
         self::assertCount(1, $index);
         self::assertSame('rotated', $entry?->message);
+    }
+
+    #[Test]
+    public function aRotatedFileListsOnlyItsOwnChannels(): void
+    {
+        $path = (string)tempnam(sys_get_temp_dir(), 'demonolog');
+        file_put_contents($path, "[2026-11-10 10:00:00] old.INFO: one [] []\n");
+        $index = (new Demonolog())->open($path)->index();
+        $index->grow();
+
+        rename($path, $path . '.1');
+        file_put_contents($path, "[2026-11-10 10:00:01] new.INFO: two [] []\n");
+        $index->grow();
+        unlink($path);
+        unlink($path . '.1');
+
+        self::assertSame(['new'], $index->channels());
     }
 
     #[Test]

@@ -21,8 +21,8 @@ final class EntryIndex implements Countable
     private const LAYOUT = 'JNnn';
     private const UNPACK = 'Joffset/Nlength/nlevel/nchannel';
     private const ENTRY_BYTES = 16;
-    // Channel ids have 16 bits. Channels beyond that share this id, which no channel filter matches.
-    private const OVERFLOW_CHANNEL = 0xFFFF;
+    // Channel ids have 16 bits. Records without a channel and channels beyond that share this id, which no channel filter matches.
+    private const NO_CHANNEL_ID = 0xFFFF;
     // A record holds at most 1 MiB of text plus one carriage return per line. Bytes skipped from a cut line are not searched.
     private const MAXIMUM_LENGTH = 2 * 1048576;
     private const FINGERPRINT_BYTES = 64;
@@ -62,6 +62,17 @@ final class EntryIndex implements Countable
         return strlen($this->matching ?? $this->all) >> 4;
     }
 
+    /**
+     * @return list<string>
+     */
+    public function channels(): array
+    {
+        $channels = array_map(strval(...), array_keys($this->channelIds));
+        sort($channels);
+
+        return $channels;
+    }
+
     public function offsetAt(int $position): int
     {
         if ($position < 0 || $position >= $this->count()) {
@@ -94,6 +105,7 @@ final class EntryIndex implements Countable
             $this->matching = $this->matching === null ? null : '';
             $this->resumeAt = 0;
             $this->lastRecordAt = null;
+            $this->channelIds = [];
         }
         if ($this->lastRecordAt !== null) {
             $this->all = substr($this->all, 0, -self::ENTRY_BYTES);
@@ -177,15 +189,26 @@ final class EntryIndex implements Countable
         $header = $this->format instanceof ReadsHeaders ? $this->format->header($record) : $this->format->parse($record);
         $level = $header->level->value ?? 0;
         $length = min($end - $record->offset, self::MAXIMUM_LENGTH);
-        $channelId = $this->channelIds[$header->channel] ?? self::OVERFLOW_CHANNEL;
-        if ($channelId === self::OVERFLOW_CHANNEL && count($this->channelIds) < self::OVERFLOW_CHANNEL) {
-            $channelId = $this->channelIds[$header->channel] = count($this->channelIds);
-        }
-        $entry = pack(self::LAYOUT, $record->offset, $length, $level, $channelId);
+        $entry = pack(self::LAYOUT, $record->offset, $length, $level, $this->channelId($header->channel));
         $this->all .= $entry;
         if ($this->matching !== null && $this->matches($record->offset, $length, $level, $header->channel)) {
             $this->matching .= $entry;
         }
+    }
+
+    private function channelId(string $channel): int
+    {
+        if ($channel === '') {
+            return self::NO_CHANNEL_ID;
+        }
+        if (isset($this->channelIds[$channel])) {
+            return $this->channelIds[$channel];
+        }
+        if (count($this->channelIds) >= self::NO_CHANNEL_ID) {
+            return self::NO_CHANNEL_ID;
+        }
+
+        return $this->channelIds[$channel] = count($this->channelIds);
     }
 
     private function matches(int $offset, int $length, int $level, ?string $channel): bool
