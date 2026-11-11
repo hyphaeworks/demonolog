@@ -8,6 +8,7 @@ use Hyphaeworks\Demonolog\Demonolog;
 use Hyphaeworks\Demonolog\Entry\Entry;
 use Hyphaeworks\Demonolog\Entry\WarningCode;
 use Hyphaeworks\Demonolog\Following\Update;
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -29,6 +30,15 @@ final class FollowerTest extends TestCase
         self::assertSame(['first', 'second'], self::messages($update));
         self::assertFalse($update->restarted);
         self::assertSame([], self::messages($follower->poll()));
+    }
+
+    #[Test]
+    public function cannotStartAtANegativeOffset(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Offset -1 is negative');
+
+        (new Demonolog())->open($this->path)->follow(-1);
     }
 
     #[Test]

@@ -9,6 +9,7 @@ use Hyphaeworks\Demonolog\Format\Format;
 use Hyphaeworks\Demonolog\Format\RecordParser;
 use Hyphaeworks\Demonolog\Reading\ByteSource;
 use Hyphaeworks\Demonolog\Reading\RecordFramer;
+use InvalidArgumentException;
 use RuntimeException;
 
 final class Follower
@@ -25,6 +26,9 @@ final class Follower
         Format $format,
         private int $offset,
     ) {
+        if ($offset < 0) {
+            throw new InvalidArgumentException(sprintf('Offset %d is negative', $offset));
+        }
         $this->framer = new RecordFramer($format->startsRecord(...));
         $this->parser = new RecordParser($format);
         $this->fingerprint = $this->fingerprintAt($offset);

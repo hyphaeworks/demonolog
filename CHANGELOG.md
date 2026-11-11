@@ -19,6 +19,8 @@ Changed:
   It no longer takes the internal `ContextSplitter` and `ExceptionText`.
 - `EntryIndex` no longer takes a `Filter` in its constructor. Use `filter()`,
   which replaces any filter the index had.
+- `LogFile::follow()` throws an `InvalidArgumentException` for a negative
+  offset, instead of a follower that never reads.
 - An `Update` that is not a restart cannot have entries from a previous file.
 - `LogFile::tail(0)` returns no entries instead of failing.
 - `EntryIndex::offsetAt()` throws an `OutOfRangeException` for a position
