@@ -24,15 +24,18 @@ final readonly class JsonFormat implements Format
     ) {
     }
 
+    /**
+     * A file may start in the middle of a record, after a copy-truncate rotation, so any line of the sample counts.
+     */
     public function detect(string $sample): bool
     {
-        try {
-            $fields = json_decode(explode("\n", ltrim($sample), 2)[0], true, 512, JSON_THROW_ON_ERROR | JSON_BIGINT_AS_STRING | JSON_INVALID_UTF8_SUBSTITUTE);
-        } catch (JsonException) {
-            return false;
+        foreach (explode("\n", $sample) as $line) {
+            if ($this->isRecord(trim($line))) {
+                return true;
+            }
         }
 
-        return is_array($fields) && array_key_exists('message', $fields) && array_key_exists('datetime', $fields);
+        return false;
     }
 
     public function startsRecord(string $line): bool
@@ -73,6 +76,20 @@ final readonly class JsonFormat implements Format
             exception: is_array($context['exception'] ?? null) ? $this->exception($context['exception']) : null,
             warnings: $timestamp === null ? [new Warning(WarningCode::Timestamp, sprintf('"%s" is not a known timestamp format', $datetime))] : [],
         );
+    }
+
+    private function isRecord(string $line): bool
+    {
+        if (!str_starts_with($line, '{')) {
+            return false;
+        }
+        try {
+            $fields = json_decode($line, true, 512, JSON_THROW_ON_ERROR | JSON_BIGINT_AS_STRING | JSON_INVALID_UTF8_SUBSTITUTE);
+        } catch (JsonException) {
+            return false;
+        }
+
+        return is_array($fields) && array_key_exists('message', $fields) && array_key_exists('datetime', $fields);
     }
 
     /**
