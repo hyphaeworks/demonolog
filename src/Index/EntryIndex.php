@@ -13,6 +13,7 @@ use Hyphaeworks\Demonolog\Reading\ByteSource;
 use Hyphaeworks\Demonolog\Reading\RawRecord;
 use Hyphaeworks\Demonolog\Reading\RecordFramer;
 use OutOfRangeException;
+use RuntimeException;
 
 final class EntryIndex implements Countable
 {
@@ -45,7 +46,7 @@ final class EntryIndex implements Countable
     private array $wantedChannels = [];
 
     public function __construct(
-        private readonly ByteSource $source,
+        private ByteSource $source,
         private readonly Format $format,
     ) {
         $this->framer = new RecordFramer($format->startsRecord(...));
@@ -78,14 +79,14 @@ final class EntryIndex implements Countable
     }
 
     /**
-     * Reads up to the given number of bytes and returns whether it reached the end of the file.
+     * Reads up to the given number of bytes. A replaced or rewritten file is read again from the start.
      * The last record read may go on after the limit, so it is read again on the next call.
      * So is the last record of the file, which may still be being written or get lines without a header appended.
      */
-    public function grow(int $maximumBytes = PHP_INT_MAX): bool
+    public function grow(int $maximumBytes = PHP_INT_MAX): Growth
     {
-        $size = $this->source->size();
-        if ($size < $this->resumeAt) {
+        $restarted = $this->reopenedReplacedFile() || $this->source->size() < $this->resumeAt;
+        if ($restarted) {
             $this->all = '';
             $this->matching = $this->matching === null ? null : '';
             $this->resumeAt = 0;
@@ -99,6 +100,7 @@ final class EntryIndex implements Countable
             $this->resumeAt = $this->lastRecordAt;
             $this->lastRecordAt = null;
         }
+        $size = $this->source->size();
         for ($window = max(1, $maximumBytes);; $window *= 2) {
             $atEnd = $window >= $size - $this->resumeAt;
             $until = $atEnd ? $size : $this->resumeAt + $window;
@@ -119,12 +121,12 @@ final class EntryIndex implements Countable
                 }
                 $this->resumeAt = $records->getReturn();
 
-                return true;
+                return new Growth(atEnd: true, restarted: $restarted);
             }
             if ($last !== null && $last->offset > $this->resumeAt) {
                 $this->resumeAt = $last->offset;
 
-                return false;
+                return new Growth(atEnd: false, restarted: $restarted);
             }
         }
     }
@@ -147,6 +149,20 @@ final class EntryIndex implements Countable
         }
 
         return $filtered;
+    }
+
+    private function reopenedReplacedFile(): bool
+    {
+        if ($this->source->path === null || !$this->source->isReplaced()) {
+            return false;
+        }
+        try {
+            $this->source = ByteSource::open($this->source->path);
+        } catch (RuntimeException) {
+            return false;
+        }
+
+        return true;
     }
 
     private function add(RawRecord $record, int $end): void

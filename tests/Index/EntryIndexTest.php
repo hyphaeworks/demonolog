@@ -147,7 +147,7 @@ final class EntryIndexTest extends TestCase
         $index = (new Demonolog())->fromString(self::LOG)->index();
 
         $steps = 1;
-        while (!$index->grow(maximumBytes: 120)) {
+        while (!$index->grow(maximumBytes: 120)->atEnd) {
             ++$steps;
         }
 
@@ -199,6 +199,27 @@ final class EntryIndexTest extends TestCase
     }
 
     #[Test]
+    public function readsARotatedFileFromTheStart(): void
+    {
+        $path = (string)tempnam(sys_get_temp_dir(), 'demonolog');
+        file_put_contents($path, "[2026-11-10 10:00:00] app.INFO: one [] []\n[2026-11-10 10:00:01] app.INFO: two [] []\n");
+        $index = (new Demonolog())->open($path)->index();
+        $first = $index->grow();
+
+        rename($path, $path . '.1');
+        file_put_contents($path, "[2026-11-10 10:00:02] app.INFO: rotated [] []\n");
+        $growth = $index->grow();
+        $entry = $index->entryAt(0);
+        unlink($path);
+        unlink($path . '.1');
+
+        self::assertFalse($first->restarted);
+        self::assertTrue($growth->restarted);
+        self::assertCount(1, $index);
+        self::assertSame('rotated', $entry?->message);
+    }
+
+    #[Test]
     public function aPositionOutsideTheIndexHasNoOffset(): void
     {
         $index = $this->index(self::LOG);
@@ -220,11 +241,12 @@ final class EntryIndexTest extends TestCase
         $errors = $index->filter(new Filter(minimumLevel: Level::Error));
 
         file_put_contents($path, "[2026-11-10 10:00:03] app.ERROR: fresh [] []\n");
-        $index->grow();
+        $growth = $index->grow();
         $errors->grow();
         $messages = array_map(static fn (int $offset): string => $log->entryAt($offset)->message ?? '', [$index->offsetAt(0), $errors->offsetAt(0)]);
         unlink($path);
 
+        self::assertTrue($growth->restarted);
         self::assertCount(1, $index);
         self::assertCount(1, $errors);
         self::assertSame(['fresh', 'fresh'], $messages);
