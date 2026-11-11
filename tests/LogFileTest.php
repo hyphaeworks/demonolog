@@ -8,6 +8,7 @@ use Hyphaeworks\Demonolog\Demonolog;
 use Hyphaeworks\Demonolog\Entry\Entry;
 use Hyphaeworks\Demonolog\Entry\Warning;
 use Hyphaeworks\Demonolog\Entry\WarningCode;
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
@@ -102,5 +103,23 @@ final class LogFileTest extends TestCase
         self::assertSame('two', $entry->message);
         self::assertSame('E', $entry->exception?->type);
         self::assertNull($log->entryAt(1000));
+    }
+
+    #[Test]
+    public function cannotReadEntriesFromANegativeOffset(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Offset -1 is negative');
+
+        (new Demonolog())->fromString("[2026-11-10 10:00:00] app.INFO: one [] []\n")->entries(-1);
+    }
+
+    #[Test]
+    public function cannotReadAnEntryAtANegativeOffset(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Offset -1 is negative');
+
+        (new Demonolog())->fromString("[2026-11-10 10:00:00] app.INFO: one [] []\n")->entryAt(-1);
     }
 }

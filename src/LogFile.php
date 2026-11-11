@@ -12,6 +12,7 @@ use Hyphaeworks\Demonolog\Format\RecordParser;
 use Hyphaeworks\Demonolog\Index\EntryIndex;
 use Hyphaeworks\Demonolog\Reading\ByteSource;
 use Hyphaeworks\Demonolog\Reading\RecordFramer;
+use InvalidArgumentException;
 
 final readonly class LogFile
 {
@@ -34,9 +35,11 @@ final readonly class LogFile
      */
     public function entries(int $fromOffset = 0): Generator
     {
-        foreach ($this->framer->records($this->source->chunks($fromOffset), $fromOffset) as $record) {
-            yield $this->parser->parse($record);
+        if ($fromOffset < 0) {
+            throw new InvalidArgumentException(sprintf('Offset %d is negative', $fromOffset));
         }
+
+        return $this->parse($fromOffset);
     }
 
     public function entryAt(int $offset): ?Entry
@@ -68,6 +71,16 @@ final readonly class LogFile
     public function follow(?int $fromOffset = null): Follower
     {
         return new Follower($this->source, $this->format, $fromOffset ?? $this->source->size());
+    }
+
+    /**
+     * @return Generator<int, Entry>
+     */
+    private function parse(int $fromOffset): Generator
+    {
+        foreach ($this->framer->records($this->source->chunks($fromOffset), $fromOffset) as $record) {
+            yield $this->parser->parse($record);
+        }
     }
 
     /**
