@@ -220,6 +220,27 @@ final class EntryIndexTest extends TestCase
     }
 
     #[Test]
+    public function aFilteredIndexKeepsItsFilterAfterARotation(): void
+    {
+        $path = (string)tempnam(sys_get_temp_dir(), 'demonolog');
+        file_put_contents($path, "[2026-11-10 10:00:00] app.ERROR: one [] []\n");
+        $index = (new Demonolog())->open($path)->index();
+        $index->grow();
+        $errors = $index->filter(new Filter(minimumLevel: Level::Error));
+
+        rename($path, $path . '.1');
+        file_put_contents($path, "[2026-11-10 10:00:01] app.INFO: two [] []\n[2026-11-10 10:00:02] app.ERROR: three [] []\n");
+        $growth = $errors->grow();
+        $entry = $errors->entryAt(0);
+        unlink($path);
+        unlink($path . '.1');
+
+        self::assertTrue($growth->restarted);
+        self::assertCount(1, $errors);
+        self::assertSame('three', $entry?->message);
+    }
+
+    #[Test]
     public function startsOverWhenTheFileWasRewrittenPastItsOldEnd(): void
     {
         $path = (string)tempnam(sys_get_temp_dir(), 'demonolog');
