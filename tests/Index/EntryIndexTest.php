@@ -171,6 +171,33 @@ final class EntryIndexTest extends TestCase
     }
 
     #[Test]
+    public function theLastStepReportsTheWholeFile(): void
+    {
+        $log = rtrim(self::LOG, "\n");
+        $index = (new Demonolog())->fromString($log)->index();
+
+        do {
+            $growth = $index->grow(maximumBytes: 120);
+        } while (!$growth->atEnd);
+
+        self::assertSame([strlen($log), strlen($log)], [$growth->indexedBytes, $growth->fileBytes]);
+    }
+
+    #[Test]
+    public function aFilteredIndexReportsTheBytesItRead(): void
+    {
+        $log = (new Demonolog())->fromString(self::LOG);
+        $all = $log->index();
+        $errors = $log->index()->filter(new Filter(minimumLevel: Level::Error));
+
+        $growth = $all->grow(maximumBytes: 120);
+        $filteredGrowth = $errors->grow(maximumBytes: 120);
+
+        self::assertSame([$growth->indexedBytes, $growth->fileBytes], [$filteredGrowth->indexedBytes, $filteredGrowth->fileBytes]);
+        self::assertGreaterThan(0, $filteredGrowth->indexedBytes);
+    }
+
+    #[Test]
     public function growsWithAFileThatIsStillBeingWritten(): void
     {
         $path = (string)tempnam(sys_get_temp_dir(), 'demonolog');
