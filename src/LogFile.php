@@ -49,12 +49,14 @@ final readonly class LogFile
     }
 
     /**
-     * @param positive-int $count
-     *
      * @return list<Entry>
      */
     public function tail(int $count): array
     {
+        if ($count < 1) {
+            return [];
+        }
+
         return array_slice(iterator_to_array($this->entries($this->startOfLast($count)), false), -$count);
     }
 
