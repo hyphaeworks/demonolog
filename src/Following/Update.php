@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hyphaeworks\Demonolog\Following;
 
 use Hyphaeworks\Demonolog\Entry\Entry;
+use InvalidArgumentException;
 
 final readonly class Update
 {
@@ -18,5 +19,8 @@ final readonly class Update
         public bool $restarted,
         public array $fromPreviousFile = [],
     ) {
+        if (!$restarted && $fromPreviousFile !== []) {
+            throw new InvalidArgumentException('Only a restart has entries from a previous file');
+        }
     }
 }
