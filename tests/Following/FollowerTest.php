@@ -8,6 +8,7 @@ use Hyphaeworks\Demonolog\Demonolog;
 use Hyphaeworks\Demonolog\Entry\Entry;
 use Hyphaeworks\Demonolog\Entry\WarningCode;
 use Hyphaeworks\Demonolog\Following\Update;
+use Hyphaeworks\Demonolog\Tests\EmptyChannelFormat;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -30,6 +31,18 @@ final class FollowerTest extends TestCase
         self::assertSame(['first', 'second'], self::messages($update));
         self::assertFalse($update->restarted);
         self::assertSame([], self::messages($follower->poll()));
+    }
+
+    #[Test]
+    public function returnsARecordItsFormatCannotTurnIntoAnEntryWithAWarning(): void
+    {
+        $follower = (new Demonolog())->open($this->path, new EmptyChannelFormat())->follow();
+
+        file_put_contents($this->path, "empty channel\ngood\n", FILE_APPEND);
+        $update = $follower->poll();
+
+        self::assertSame(['empty channel', 'good'], self::messages($update));
+        self::assertSame(WarningCode::Invalid, $update->entries[0]->warnings[0]->code ?? null);
     }
 
     #[Test]

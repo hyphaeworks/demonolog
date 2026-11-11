@@ -7,12 +7,15 @@ namespace Hyphaeworks\Demonolog\Tests\Index;
 use Hyphaeworks\Demonolog\Demonolog;
 use Hyphaeworks\Demonolog\Entry\Entry;
 use Hyphaeworks\Demonolog\Entry\Level;
+use Hyphaeworks\Demonolog\Entry\Warning;
+use Hyphaeworks\Demonolog\Entry\WarningCode;
 use Hyphaeworks\Demonolog\Format\Format;
 use Hyphaeworks\Demonolog\Format\Header;
 use Hyphaeworks\Demonolog\Format\ReadsHeaders;
 use Hyphaeworks\Demonolog\Index\EntryIndex;
 use Hyphaeworks\Demonolog\Index\Filter;
 use Hyphaeworks\Demonolog\Reading\RawRecord;
+use Hyphaeworks\Demonolog\Tests\EmptyChannelFormat;
 use OutOfRangeException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -404,6 +407,49 @@ final class EntryIndexTest extends TestCase
         self::assertCount(1, $index);
         self::assertCount(1, $errors);
         self::assertSame(['fresh', 'fresh'], $messages);
+    }
+
+    #[Test]
+    public function indexesARecordItsFormatCannotTurnIntoAnEntry(): void
+    {
+        $index = (new Demonolog())->fromString("good\nempty channel\ngood\n", new EmptyChannelFormat())->index();
+
+        $index->grow();
+
+        self::assertCount(3, $index);
+        self::assertSame([WarningCode::Invalid], array_map(static fn (Warning $warning): WarningCode => $warning->code, $index->entryAt(1)->warnings ?? []));
+    }
+
+    #[Test]
+    public function indexesARecordWhoseHeaderItsFormatCannotRead(): void
+    {
+        $format = new class implements Format, ReadsHeaders {
+            public function detect(string $sample): bool
+            {
+                return true;
+            }
+
+            public function startsRecord(string $line): bool
+            {
+                return true;
+            }
+
+            public function parse(RawRecord $record): Entry
+            {
+                return new Entry($record->offset, $record->text, null, null, null, '', $record->text);
+            }
+
+            public function header(RawRecord $record): Header
+            {
+                return new Header(Level::Info, $record->text === 'empty channel' ? '' : 'app');
+            }
+        };
+        $index = (new Demonolog())->fromString("good\nempty channel\ngood\n", $format)->index();
+
+        $index->grow();
+
+        self::assertCount(3, $index);
+        self::assertCount(2, $index->filter(new Filter(channels: ['app'])));
     }
 
     #[Test]

@@ -7,7 +7,6 @@ namespace Hyphaeworks\Demonolog\Index;
 use Countable;
 use Hyphaeworks\Demonolog\Entry\Entry;
 use Hyphaeworks\Demonolog\Format\Format;
-use Hyphaeworks\Demonolog\Format\ReadsHeaders;
 use Hyphaeworks\Demonolog\Format\RecordParser;
 use Hyphaeworks\Demonolog\Reading\ByteSource;
 use Hyphaeworks\Demonolog\Reading\RawRecord;
@@ -27,7 +26,7 @@ final class EntryIndex implements Countable
 
     public function __construct(
         private ByteSource $source,
-        private readonly Format $format,
+        Format $format,
     ) {
         $this->framer = new RecordFramer($format->startsRecord(...));
         $this->parser = new RecordParser($format);
@@ -150,7 +149,7 @@ final class EntryIndex implements Countable
 
     private function add(RawRecord $record, int $end): void
     {
-        $header = $this->format instanceof ReadsHeaders ? $this->format->header($record) : $this->format->parse($record);
+        $header = $this->parser->header($record);
         $row = $this->file->add($record->offset, min($end - $record->offset, self::MAXIMUM_LENGTH), $header->level->value ?? 0, $header->channel);
         $this->filtered?->offer($row, $this->file->channelName($row['channel']), $this->source);
     }

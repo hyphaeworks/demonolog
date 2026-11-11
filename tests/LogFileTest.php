@@ -14,6 +14,17 @@ use PHPUnit\Framework\TestCase;
 final class LogFileTest extends TestCase
 {
     #[Test]
+    public function returnsARecordItsFormatCannotTurnIntoAnEntryWithAWarning(): void
+    {
+        $entries = iterator_to_array((new Demonolog())->fromString("good\nempty channel\ngood\n", new EmptyChannelFormat())->entries(), false);
+
+        self::assertSame(['good', 'empty channel', 'good'], array_map(static fn (Entry $entry): string => $entry->message, $entries));
+        self::assertSame([], $entries[0]->warnings);
+        self::assertEquals([new Warning(WarningCode::Invalid, 'A channel has a name, or is null')], $entries[1]->warnings);
+        self::assertSame(5, $entries[1]->offset);
+    }
+
+    #[Test]
     public function tailReturnsTheLastEntriesAcrossManyChunks(): void
     {
         $log = '';

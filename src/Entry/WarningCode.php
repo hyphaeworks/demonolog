@@ -11,4 +11,5 @@ enum WarningCode
     case Timestamp;
     case Pcre;
     case Truncated;
+    case Invalid;
 }
