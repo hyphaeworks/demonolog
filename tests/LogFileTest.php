@@ -93,6 +93,15 @@ final class LogFileTest extends TestCase
     }
 
     #[Test]
+    public function cannotTailANegativeCount(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Count -1 is negative');
+
+        (new Demonolog())->fromString("[2026-11-10 10:00:00] app.INFO: one [] []\n")->tail(-1);
+    }
+
+    #[Test]
     public function entryAtParsesTheRecordThatStartsAtTheOffset(): void
     {
         $log = (new Demonolog())->fromString("[2026-11-10 10:00:00] app.INFO: one [] []\n[2026-11-10 10:00:01] app.ERROR: two {\"exception\":\"[object] (E(code: 0): x at /a.php:1)\n[stacktrace]\n#0 {main}\n\"} []\n[2026-11-10 10:00:02] app.INFO: three [] []\n");

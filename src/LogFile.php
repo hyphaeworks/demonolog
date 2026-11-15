@@ -56,7 +56,10 @@ final readonly class LogFile
      */
     public function tail(int $count): array
     {
-        if ($count < 1) {
+        if ($count < 0) {
+            throw new InvalidArgumentException(sprintf('Count %d is negative', $count));
+        }
+        if ($count === 0) {
             return [];
         }
 

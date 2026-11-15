@@ -41,7 +41,8 @@ Changed:
 - A `Filter` rejects an empty channel name, which could never match.
 - `ApplicationFrames` rejects an empty vendor path, which marked every frame.
 - An `Update` that is not a restart cannot have entries from a previous file.
-- `LogFile::tail(0)` returns no entries instead of failing.
+- `LogFile::tail(0)` returns no entries instead of failing. A negative count
+  throws an `InvalidArgumentException`.
 - `EntryIndex::offsetAt()` throws an `OutOfRangeException` for a position
   outside the index.
 
