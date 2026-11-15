@@ -11,6 +11,7 @@ use Hyphaeworks\Demonolog\Format\RecordParser;
 use Hyphaeworks\Demonolog\Reading\ByteSource;
 use Hyphaeworks\Demonolog\Reading\RawRecord;
 use Hyphaeworks\Demonolog\Reading\RecordFramer;
+use InvalidArgumentException;
 use RuntimeException;
 
 final class EntryIndex implements Countable
@@ -73,6 +74,9 @@ final class EntryIndex implements Countable
      */
     public function grow(int $maximumBytes = PHP_INT_MAX): Growth
     {
+        if ($maximumBytes < 1) {
+            throw new InvalidArgumentException(sprintf('Growing by %d bytes reads nothing', $maximumBytes));
+        }
         $restarted = $this->reopenedReplacedFile() || $this->fingerprintAt($this->file->resumeAt()) !== $this->file->fingerprint();
         if ($restarted) {
             $this->file = new IndexedFile();
@@ -84,7 +88,7 @@ final class EntryIndex implements Countable
         }
         $resumeAt = $this->file->resumeAt();
         $size = $this->source->size();
-        for ($window = max(1, $maximumBytes);; $window *= 2) {
+        for ($window = $maximumBytes;; $window *= 2) {
             $atEnd = $window >= $size - $resumeAt;
             $until = $atEnd ? $size : $resumeAt + $window;
             $records = $this->framer->records($this->source->chunks($resumeAt, toOffset: $until), $resumeAt, holdPartialTail: !$atEnd);

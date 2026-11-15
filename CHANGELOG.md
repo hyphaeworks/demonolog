@@ -16,7 +16,8 @@ Changed:
 
 - `EntryIndex::grow()` returns a `Growth` instead of a bool. It has
   `atEnd()`, `restarted`, and `indexedBytes` and `fileBytes` for a progress
-  bar. It cannot report more bytes than the file has.
+  bar. It cannot report more bytes than the file has. A `maximumBytes` below 1
+  throws an `InvalidArgumentException` instead of reading 1 byte.
 - `Entry::$channel` and `Header::$channel` are null when a record has no
   channel, instead of an empty string. An empty channel name is rejected.
 - `Location::$line` is null when the line is not known, instead of 0. A

@@ -16,6 +16,7 @@ use Hyphaeworks\Demonolog\Index\EntryIndex;
 use Hyphaeworks\Demonolog\Index\Filter;
 use Hyphaeworks\Demonolog\Reading\RawRecord;
 use Hyphaeworks\Demonolog\Tests\EmptyChannelFormat;
+use InvalidArgumentException;
 use OutOfRangeException;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -215,6 +216,15 @@ final class EntryIndexTest extends TestCase
         self::assertGreaterThan(2, $steps);
         self::assertSame($this->messages($this->index(self::LOG)), $this->messages($index));
         self::assertSame(['payment failed'], $this->messages($index->filter(new Filter(text: '{main}'))));
+    }
+
+    #[Test]
+    public function cannotGrowByLessThanOneByte(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Growing by 0 bytes reads nothing');
+
+        (new Demonolog())->fromString(self::LOG)->index()->grow(maximumBytes: 0);
     }
 
     #[Test]
