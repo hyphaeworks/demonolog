@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Hyphaeworks\Demonolog\Index;
 
 use Hyphaeworks\Demonolog\Entry\Level;
+use InvalidArgumentException;
 
 final readonly class Filter
 {
@@ -18,5 +19,8 @@ final readonly class Filter
         public array $channels = [],
         public string $text = '',
     ) {
+        if (in_array('', $channels, true)) {
+            throw new InvalidArgumentException('A channel has a name');
+        }
     }
 }
