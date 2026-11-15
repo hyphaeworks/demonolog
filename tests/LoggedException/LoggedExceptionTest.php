@@ -21,4 +21,13 @@ final class LoggedExceptionTest extends TestCase
 
         new LoggedException('RuntimeException', 'Outer', 0, new Location('/app/src/A.php', 1), previous: $inner, truncated: true);
     }
+
+    #[Test]
+    public function rejectsAnEmptyType(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('An exception has a type');
+
+        new LoggedException('', 'Failed', 0, null);
+    }
 }

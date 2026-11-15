@@ -45,6 +45,15 @@ final class JsonFormatTest extends TestCase
     }
 
     #[Test]
+    public function anExceptionWithAnEmptyClassIsNoException(): void
+    {
+        $entry = (new JsonFormat())->parse(new RawRecord(0, '{"message":"Failed","context":{"exception":{"class":"","message":"x","code":0,"file":"/app/src/A.php:3"}},"level":400,"level_name":"ERROR","channel":"app","datetime":"2026-11-09T10:15:30+00:00","extra":{}}'));
+
+        self::assertSame('Failed', $entry->message);
+        self::assertNull($entry->exception);
+    }
+
+    #[Test]
     public function theLevelNameWinsOverAContradictingNumber(): void
     {
         $entry = (new JsonFormat())->parse(new RawRecord(0, '{"message":"Hello","context":{},"level":400,"level_name":"INFO","channel":"app","datetime":"2026-11-09T10:15:30+00:00","extra":{}}'));

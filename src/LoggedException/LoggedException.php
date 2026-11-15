@@ -17,6 +17,9 @@ final readonly class LoggedException
         public ?self $previous = null,
         public bool $truncated = false,
     ) {
+        if ($type === '') {
+            throw new InvalidArgumentException('An exception has a type');
+        }
         if ($truncated && $previous !== null) {
             throw new InvalidArgumentException('Only the innermost exception of a chain can be truncated');
         }

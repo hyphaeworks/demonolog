@@ -99,7 +99,7 @@ final readonly class JsonFormat implements Format
      */
     private function exception(array $normalized): ?LoggedException
     {
-        if (!is_string($normalized['class'] ?? null)) {
+        if (!is_string($normalized['class'] ?? null) || $normalized['class'] === '') {
             return null;
         }
         $locations = [];
