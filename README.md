@@ -110,6 +110,14 @@ entries already indexed, then reads on. A text filter reads every record it
 checks, so on a large file grow it in steps, as below: the rows found so far
 show while it runs, and to cancel you stop calling `grow()`.
 
+`positionOf($offset)` finds the row of the entry at an offset, or of the
+nearest one before it, so a viewer keeps its place when the filter changes:
+
+```php
+$selected = $errors->offsetAt($row);
+$row = $index->positionOf($selected) ?? 0;
+```
+
 `channels()` lists the channels of the file in alphabetical order, for a filter
 menu. A filtered index lists them all, not only the ones it keeps.
 

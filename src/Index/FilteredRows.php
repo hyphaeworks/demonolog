@@ -47,6 +47,11 @@ final class FilteredRows implements Countable
         return $this->rows->at($position);
     }
 
+    public function positionOf(int $offset): ?int
+    {
+        return $this->rows->positionOf($offset);
+    }
+
     /**
      * @return ?int the offset of the first row left unchecked, or null when every row of the file is checked
      */

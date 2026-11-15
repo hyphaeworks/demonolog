@@ -9,6 +9,8 @@ Added:
 - `EntryIndex::entryAt()` reads the entry at a position from the file the
   index reads.
 - `EntryIndex::channels()` lists the channels of the file.
+- `EntryIndex::positionOf()` finds the row of the entry at an offset, or of
+  the nearest one before it.
 - `WarningCode::Invalid`: a record whose format built an entry that breaks a
   rule comes back unparsed with this warning, instead of stopping the read.
 

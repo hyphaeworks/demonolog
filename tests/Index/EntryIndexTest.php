@@ -451,6 +451,35 @@ final class EntryIndexTest extends TestCase
     }
 
     #[Test]
+    public function findsThePositionOfAnEntryByItsOffset(): void
+    {
+        self::assertSame(2, $this->index(self::LOG)->positionOf(105));
+    }
+
+    #[Test]
+    public function anOffsetInsideAnEntryFindsThatEntry(): void
+    {
+        self::assertSame(2, $this->index(self::LOG)->positionOf(232));
+    }
+
+    #[Test]
+    public function anOffsetBeforeTheFirstEntryHasNoPosition(): void
+    {
+        $index = $this->index("not a record\n[2026-11-10 10:00:00] app.INFO: one [] []\n");
+        $index = $this->filtered($index, new Filter(minimumLevel: Level::Info));
+
+        self::assertNull($index->positionOf(5));
+    }
+
+    #[Test]
+    public function aFilteredIndexFindsTheNearestEntryItKeeps(): void
+    {
+        $errors = $this->filtered($this->index(self::LOG), new Filter(minimumLevel: Level::Warning));
+
+        self::assertSame([0, 0, 1], [$errors->positionOf(105), $errors->positionOf(200), $errors->positionOf(233)]);
+    }
+
+    #[Test]
     public function aPositionOutsideTheIndexHasNoOffset(): void
     {
         $index = $this->index(self::LOG);

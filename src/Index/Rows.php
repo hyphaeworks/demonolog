@@ -42,6 +42,27 @@ final class Rows implements Countable
     }
 
     /**
+     * Rows are in file order, so a binary search finds the last row at or before the offset.
+     */
+    public function positionOf(int $offset): ?int
+    {
+        $found = null;
+        $low = 0;
+        $high = $this->count() - 1;
+        while ($low <= $high) {
+            $middle = intdiv($low + $high, 2);
+            if ($this->at($middle)['offset'] <= $offset) {
+                $found = $middle;
+                $low = $middle + 1;
+                continue;
+            }
+            $high = $middle - 1;
+        }
+
+        return $found;
+    }
+
+    /**
      * @param array{offset: int, length: int, level: int, channel: int} $row
      */
     public function add(array $row): void

@@ -54,6 +54,11 @@ final class IndexedFile implements Countable
         return $this->rows->at($position);
     }
 
+    public function positionOf(int $offset): ?int
+    {
+        return $this->rows->positionOf($offset);
+    }
+
     /**
      * @return list<string>
      */

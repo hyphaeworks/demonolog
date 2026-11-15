@@ -57,6 +57,14 @@ final class EntryIndex implements Countable
         return ($this->filtered ?? $this->file)->at($position)['offset'];
     }
 
+    /**
+     * The position of the entry at the offset, or of the nearest one before it. Null when no entry starts at or before it.
+     */
+    public function positionOf(int $offset): ?int
+    {
+        return ($this->filtered ?? $this->file)->positionOf($offset);
+    }
+
     public function entryAt(int $position): ?Entry
     {
         $offset = $this->offsetAt($position);
