@@ -98,11 +98,17 @@ $index = $log->index();
 $index->grow();
 
 $errors = $index->filter(new Filter(minimumLevel: Level::Error, channels: ['app'], text: 'payment'));
+$errors->grow();
 
 for ($row = 0; $row < count($errors); ++$row) {
     echo $errors->entryAt($row)?->message, "\n";
 }
 ```
+
+`filter()` returns at once with an empty index. Its `grow()` checks the
+entries already indexed, then reads on. A text filter reads every record it
+checks, so on a large file grow it in steps, as below: the rows found so far
+show while it runs, and to cancel you stop calling `grow()`.
 
 `channels()` lists the channels of the file in alphabetical order, for a filter
 menu. A filtered index lists them all, not only the ones it keeps.
@@ -120,7 +126,7 @@ do {
 
 At the end both numbers are equal. An empty file reports 0 of 0. A later
 `grow()` adds the entries written since. A filtered index keeps its filter when
-it grows.
+it grows, and reports the bytes it has checked.
 
 When the file was rotated, truncated or rewritten, `grow()` reads it again from
 the start and reports `restarted`, so a viewer knows its rows are gone.

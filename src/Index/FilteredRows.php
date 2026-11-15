@@ -19,6 +19,9 @@ final class FilteredRows implements Countable
      */
     private readonly array $wantedChannels;
 
+    // The rows of the file before this position are checked. Matches are kept in file order, so later rows wait for them.
+    private int $checked = 0;
+
     public function __construct(
         private readonly Filter $filter,
     ) {
@@ -45,18 +48,30 @@ final class FilteredRows implements Countable
     }
 
     /**
-     * @param array{offset: int, length: int, level: int, channel: int} $row
+     * @return ?int the offset of the first row left unchecked, or null when every row of the file is checked
      */
-    public function offer(array $row, ?string $channel, ByteSource $source): void
+    public function check(IndexedFile $file, ByteSource $source, int $maximumBytes): ?int
     {
-        if ($this->matches($row, $channel, $source)) {
-            $this->rows->add($row);
+        $bytes = 0;
+        while ($this->checked < $file->count()) {
+            $row = $file->at($this->checked);
+            if ($bytes >= $maximumBytes) {
+                return $row['offset'];
+            }
+            $bytes += $row['length'];
+            ++$this->checked;
+            if ($this->matches($row, $file->channelName($row['channel']), $source)) {
+                $this->rows->add($row);
+            }
         }
+
+        return null;
     }
 
-    public function removeLastIfAt(int $offset): void
+    public function reopen(int $offset, int $rowsInFile): void
     {
         $this->rows->removeLastIfAt($offset);
+        $this->checked = min($this->checked, $rowsInFile);
     }
 
     /**

@@ -82,12 +82,16 @@ final class EntryIndex implements Countable
             $this->file = new IndexedFile();
             $this->filtered = $this->filtered?->emptied();
         }
+        $size = $this->source->size();
+        $uncheckedAt = $this->filtered?->check($this->file, $this->source, $maximumBytes);
+        if ($uncheckedAt !== null) {
+            return new Growth(restarted: $restarted, indexedBytes: $uncheckedAt, fileBytes: $size);
+        }
         $reopenedAt = $this->file->reopenLastRecord();
         if ($reopenedAt !== null) {
-            $this->filtered?->removeLastIfAt($reopenedAt);
+            $this->filtered?->reopen($reopenedAt, $this->file->count());
         }
         $resumeAt = $this->file->resumeAt();
-        $size = $this->source->size();
         for ($window = $maximumBytes;; $window *= 2) {
             $atEnd = $window >= $size - $resumeAt;
             $until = $atEnd ? $size : $resumeAt + $window;
@@ -116,16 +120,12 @@ final class EntryIndex implements Countable
 
     /**
      * The filter replaces the one this index may have, and stays when the filtered index grows.
+     * It checks the entries already indexed as the filtered index grows, so a large index is filtered in steps.
      */
     public function filter(Filter $filter): self
     {
         $filtered = clone $this;
-        $rows = new FilteredRows($filter);
-        for ($position = 0, $end = $this->file->count(); $position < $end; ++$position) {
-            $row = $this->file->at($position);
-            $rows->offer($row, $this->file->channelName($row['channel']), $this->source);
-        }
-        $filtered->filtered = $rows;
+        $filtered->filtered = new FilteredRows($filter);
 
         return $filtered;
     }
@@ -154,8 +154,8 @@ final class EntryIndex implements Countable
     private function add(RawRecord $record, int $end): void
     {
         $header = $this->parser->header($record);
-        $row = $this->file->add($record->offset, min($end - $record->offset, self::MAXIMUM_LENGTH), $header->level->value ?? 0, $header->channel);
-        $this->filtered?->offer($row, $this->file->channelName($row['channel']), $this->source);
+        $this->file->add($record->offset, min($end - $record->offset, self::MAXIMUM_LENGTH), $header->level->value ?? 0, $header->channel);
+        $this->filtered?->check($this->file, $this->source, PHP_INT_MAX);
     }
 
     private function stopAt(int $offset, int $size, bool $restarted, ?int $openRecordAt): Growth

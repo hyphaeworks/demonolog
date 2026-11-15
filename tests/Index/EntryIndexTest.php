@@ -47,7 +47,7 @@ final class EntryIndexTest extends TestCase
     #[Test]
     public function readsTheEntryAtAPosition(): void
     {
-        $errors = $this->index(self::LOG)->filter(new Filter(minimumLevel: Level::Error));
+        $errors = $this->filtered($this->index(self::LOG), new Filter(minimumLevel: Level::Error));
 
         $entry = $errors->entryAt(0);
 
@@ -58,7 +58,7 @@ final class EntryIndexTest extends TestCase
     #[Test]
     public function keepsEntriesAtOrAboveAMinimumLevel(): void
     {
-        $filtered = $this->index(self::LOG)->filter(new Filter(minimumLevel: Level::Warning));
+        $filtered = $this->filtered($this->index(self::LOG), new Filter(minimumLevel: Level::Warning));
 
         self::assertSame(['payment failed', 'slow query'], $this->messages($filtered));
     }
@@ -66,7 +66,7 @@ final class EntryIndexTest extends TestCase
     #[Test]
     public function keepsEntriesOfTheGivenChannels(): void
     {
-        $filtered = $this->index(self::LOG)->filter(new Filter(channels: ['security', 'doctrine']));
+        $filtered = $this->filtered($this->index(self::LOG), new Filter(channels: ['security', 'doctrine']));
 
         self::assertSame(['user logged in', 'slow query'], $this->messages($filtered));
     }
@@ -74,7 +74,7 @@ final class EntryIndexTest extends TestCase
     #[Test]
     public function keepsEntriesWhoseRecordContainsTheTextIgnoringCase(): void
     {
-        $filtered = $this->index(self::LOG)->filter(new Filter(text: 'STACKTRACE'));
+        $filtered = $this->filtered($this->index(self::LOG), new Filter(text: 'STACKTRACE'));
 
         self::assertSame(['payment failed'], $this->messages($filtered));
     }
@@ -82,8 +82,7 @@ final class EntryIndexTest extends TestCase
     #[Test]
     public function findsTextOnTheLastLineOfARecordWithCarriageReturns(): void
     {
-        $filtered = $this->index("[2026-11-10 10:00:00] app.INFO: other [] []\r\n[2026-11-10 10:00:01] app.ERROR: first\r\nsecond\r\nneedle\r\n")
-            ->filter(new Filter(text: 'needle'));
+        $filtered = $this->filtered($this->index("[2026-11-10 10:00:00] app.INFO: other [] []\r\n[2026-11-10 10:00:01] app.ERROR: first\r\nsecond\r\nneedle\r\n"), new Filter(text: 'needle'));
 
         self::assertCount(1, $filtered);
         self::assertSame(45, $filtered->offsetAt(0));
@@ -92,9 +91,74 @@ final class EntryIndexTest extends TestCase
     #[Test]
     public function combinesTheConditions(): void
     {
-        $filtered = $this->index(self::LOG)->filter(new Filter(minimumLevel: Level::Info, channels: ['app'], text: 'failed'));
+        $filtered = $this->filtered($this->index(self::LOG), new Filter(minimumLevel: Level::Info, channels: ['app'], text: 'failed'));
 
         self::assertSame(['payment failed'], $this->messages($filtered));
+    }
+
+    #[Test]
+    public function filtersInStepsAsItGrows(): void
+    {
+        $filtered = $this->index(self::LOG)->filter(new Filter(text: '2026'));
+        $countBeforeGrowing = count($filtered);
+
+        $progress = [];
+        do {
+            $growth = $filtered->grow(maximumBytes: 60);
+            $progress[] = $growth->indexedBytes;
+        } while (!$growth->atEnd());
+
+        $sorted = array_unique($progress);
+        sort($sorted);
+        self::assertSame(0, $countBeforeGrowing);
+        self::assertGreaterThan(2, count($progress));
+        self::assertSame($sorted, $progress);
+        self::assertSame(strlen(self::LOG), $growth->indexedBytes);
+        self::assertSame(['booting', 'user logged in', 'payment failed', 'slow query'], $this->messages($filtered));
+    }
+
+    #[Test]
+    public function aFilterStillCatchingUpTakesInAppendedRecords(): void
+    {
+        $path = (string)tempnam(sys_get_temp_dir(), 'demonolog');
+        file_put_contents($path, self::LOG);
+        $index = (new Demonolog())->open($path)->index();
+        $index->grow();
+        $filtered = $index->filter(new Filter(text: '2026'));
+        $firstStep = $filtered->grow(maximumBytes: 60);
+
+        file_put_contents($path, "[2026-11-10 10:00:04] app.INFO: appended [] []\n", FILE_APPEND);
+        do {
+            $growth = $filtered->grow(maximumBytes: 60);
+        } while (!$growth->atEnd());
+        $offsets = array_map($filtered->offsetAt(...), range(0, count($filtered) - 1));
+        unlink($path);
+
+        self::assertFalse($firstStep->atEnd());
+        self::assertSame([0, 47, 105, 233, strlen(self::LOG)], $offsets);
+    }
+
+    #[Test]
+    public function aFilterStillCatchingUpStartsOverWithARotatedFile(): void
+    {
+        $path = (string)tempnam(sys_get_temp_dir(), 'demonolog');
+        file_put_contents($path, self::LOG);
+        $index = (new Demonolog())->open($path)->index();
+        $index->grow();
+        $filtered = $index->filter(new Filter(text: '2026'));
+        $filtered->grow(maximumBytes: 60);
+
+        rename($path, $path . '.1');
+        file_put_contents($path, "[2026-11-10 12:00:00] app.INFO: rotated [] []\n");
+        $growth = $filtered->grow(maximumBytes: 60);
+        $entry = $filtered->entryAt(0);
+        unlink($path);
+        unlink($path . '.1');
+
+        self::assertTrue($growth->restarted);
+        self::assertTrue($growth->atEnd());
+        self::assertCount(1, $filtered);
+        self::assertSame('rotated', $entry?->message);
     }
 
     #[Test]
@@ -177,7 +241,7 @@ final class EntryIndexTest extends TestCase
             $log .= sprintf("[2026-11-10 10:00:00] c%d.INFO: m [] []\n", $channel);
         }
 
-        $filtered = $this->index($log)->filter(new Filter(channels: ['c0']));
+        $filtered = $this->filtered($this->index($log), new Filter(channels: ['c0']));
 
         self::assertCount(1, $filtered);
     }
@@ -193,7 +257,7 @@ final class EntryIndexTest extends TestCase
         file_put_contents($path, $log);
         $index = (new Demonolog())->open($path)->index();
         $index->grow();
-        $filtered = $index->filter(new Filter(channels: ['c65535']));
+        $filtered = $this->filtered($index, new Filter(channels: ['c65535']));
         $countBeforeGrowing = count($filtered);
 
         file_put_contents($path, "[2026-11-10 10:00:01] c65535.INFO: again [] []\n", FILE_APPEND);
@@ -215,7 +279,7 @@ final class EntryIndexTest extends TestCase
 
         self::assertGreaterThan(2, $steps);
         self::assertSame($this->messages($this->index(self::LOG)), $this->messages($index));
-        self::assertSame(['payment failed'], $this->messages($index->filter(new Filter(text: '{main}'))));
+        self::assertSame(['payment failed'], $this->messages($this->filtered($index, new Filter(text: '{main}'))));
     }
 
     #[Test]
@@ -276,7 +340,7 @@ final class EntryIndexTest extends TestCase
         $index = (new Demonolog())->open($path)->index();
 
         $index->grow();
-        $filtered = $index->filter(new Filter(text: 'tw'));
+        $filtered = $this->filtered($index, new Filter(text: 'tw'));
         self::assertCount(2, $index);
         self::assertCount(1, $filtered);
 
@@ -459,7 +523,7 @@ final class EntryIndexTest extends TestCase
         $index->grow();
 
         self::assertCount(3, $index);
-        self::assertCount(2, $index->filter(new Filter(channels: ['app'])));
+        self::assertCount(2, $this->filtered($index, new Filter(channels: ['app'])));
     }
 
     #[Test]
@@ -490,7 +554,7 @@ final class EntryIndexTest extends TestCase
 
         $index->grow();
 
-        self::assertSame(6, $index->filter(new Filter(minimumLevel: Level::Error, channels: ['app']))->offsetAt(0));
+        self::assertSame(6, $this->filtered($index, new Filter(minimumLevel: Level::Error, channels: ['app']))->offsetAt(0));
     }
 
     private function index(string $log): EntryIndex
@@ -499,6 +563,14 @@ final class EntryIndexTest extends TestCase
         $index->grow();
 
         return $index;
+    }
+
+    private function filtered(EntryIndex $index, Filter $filter): EntryIndex
+    {
+        $filtered = $index->filter($filter);
+        $filtered->grow();
+
+        return $filtered;
     }
 
     /**

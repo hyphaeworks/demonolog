@@ -93,15 +93,9 @@ final class IndexedFile implements Countable
         return $offset;
     }
 
-    /**
-     * @return array{offset: int, length: int, level: int, channel: int}
-     */
-    public function add(int $offset, int $length, int $level, ?string $channel): array
+    public function add(int $offset, int $length, int $level, ?string $channel): void
     {
-        $row = ['offset' => $offset, 'length' => $length, 'level' => $level, 'channel' => $this->channelId($channel)];
-        $this->rows->add($row);
-
-        return $row;
+        $this->rows->add(['offset' => $offset, 'length' => $length, 'level' => $level, 'channel' => $this->channelId($channel)]);
     }
 
     public function stopAt(int $offset, string $fingerprint, ?int $openRecordAt): void
