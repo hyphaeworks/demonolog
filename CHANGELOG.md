@@ -36,6 +36,7 @@ Changed:
   a negative offset, instead of returning no entries.
 - A `LoggedException` rejects an empty type. A JSON exception with an empty
   class is no exception.
+- A `Frame` rejects an empty class or function name.
 - An `Update` that is not a restart cannot have entries from a previous file.
 - `LogFile::tail(0)` returns no entries instead of failing.
 - `EntryIndex::offsetAt()` throws an `OutOfRangeException` for a position

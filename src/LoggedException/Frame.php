@@ -20,6 +20,12 @@ final readonly class Frame
         if ($index < 0) {
             throw new InvalidArgumentException(sprintf('Frame index %d is negative', $index));
         }
+        if ($class === '') {
+            throw new InvalidArgumentException('A class has a name, or is null');
+        }
+        if ($function === '') {
+            throw new InvalidArgumentException('A function has a name, or is null');
+        }
         if (($class === null) !== ($callType === null)) {
             throw new InvalidArgumentException('A frame has a class and a call type, or neither');
         }

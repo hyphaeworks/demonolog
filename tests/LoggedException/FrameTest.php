@@ -64,6 +64,24 @@ final class FrameTest extends TestCase
     }
 
     #[Test]
+    public function rejectsAnEmptyClass(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('A class has a name, or is null');
+
+        Frame::call(0, null, '', CallType::Static, 'boot', '', true);
+    }
+
+    #[Test]
+    public function rejectsAnEmptyFunction(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('A function has a name, or is null');
+
+        Frame::call(0, null, null, null, '', '', true);
+    }
+
+    #[Test]
     public function rejectsANegativeIndex(): void
     {
         $this->expectException(InvalidArgumentException::class);
