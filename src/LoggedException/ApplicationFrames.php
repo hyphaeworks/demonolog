@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Hyphaeworks\Demonolog\LoggedException;
 
+use InvalidArgumentException;
+
 final readonly class ApplicationFrames
 {
     /**
@@ -12,6 +14,9 @@ final readonly class ApplicationFrames
     public function __construct(
         private array $vendorPaths = ['vendor/'],
     ) {
+        if (in_array('', $vendorPaths, true)) {
+            throw new InvalidArgumentException('A vendor path is not empty');
+        }
     }
 
     /**
